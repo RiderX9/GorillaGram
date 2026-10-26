@@ -10,10 +10,20 @@ import org.telegram.messenger.R;
 public class LauncherIconController {
     public static void tryFixLauncherIconIfNeeded() {
         android.content.SharedPreferences prefs = ApplicationLoader.applicationContext.getSharedPreferences("gorillagram_app", Context.MODE_PRIVATE);
-        boolean initialized = prefs.getBoolean("gorilla_icon_initialized_v2", false);
+        boolean initialized = prefs.getBoolean("gorilla_icon_initialized_v3", false);
         if (!initialized) {
+            String[] oldAliases = {
+                "GoogleIcon", "ColorfulIcon", "DarkGreenIcon", "NeonIcon",
+                "NielloIcon", "BlueIcon", "DarkBlueIcon", "BlurBlueIcon"
+            };
+            for (String alias : oldAliases) {
+                try {
+                    ComponentName cn = new ComponentName(ApplicationLoader.applicationContext.getPackageName(), "org.telegram.messenger." + alias);
+                    ApplicationLoader.applicationContext.getPackageManager().setComponentEnabledSetting(cn, PackageManager.COMPONENT_ENABLED_STATE_DISABLED, PackageManager.DONT_KILL_APP);
+                } catch (Exception ignored) {}
+            }
             setIcon(LauncherIcon.DEFAULT);
-            prefs.edit().putBoolean("gorilla_icon_initialized_v2", true).apply();
+            prefs.edit().putBoolean("gorilla_icon_initialized_v3", true).apply();
             return;
         }
 
@@ -42,15 +52,7 @@ public class LauncherIconController {
     }
 
     public enum LauncherIcon {
-        DEFAULT("DefaultIcon", R.mipmap.ic_launcher_gorilla, R.mipmap.ic_launcher_gorilla, R.string.AppIconGorilla),
-        GOOGLE("GoogleIcon", R.mipmap.icon_background_google, R.mipmap.icon_foreground_google, R.string.AppIconGoogle),
-        COLORFUL("ColorfulIcon", R.mipmap.icon_background_colorful, R.mipmap.icon_foreground_colorful, R.string.AppIconColorful),
-        DARKGREEN("DarkGreenIcon", R.mipmap.icon_background_darkgreen, R.mipmap.icon_foreground_darkgreen, R.string.AppIconDarkGreen),
-        NEON("NeonIcon", R.mipmap.icon_background_neon, R.mipmap.icon_foreground_neon, R.string.AppIconNeon),
-        NIELLO("NielloIcon", R.drawable.ic_launcher_nagram_round_niello_background, R.drawable.ic_launcher_nagram_round_niello_foreground, R.string.AppIconNiello),
-        BLUE("BlueIcon", R.color.nagram_block_round_background, R.drawable.ic_launcher_nagram_blue_foreground, R.string.AppIconBlue),
-        DARKBLUE("DarkBlueIcon", R.color.nagram_dark_blue_background, R.drawable.ic_launcher_nagram_dark_blue_foreground, R.string.AppIconDarkBlue),
-        BLURBLUE("BlurBlueIcon", R.drawable.ic_launcher_nagram_blur_blue_background, R.drawable.ic_launcher_nagram_blur_blue_foreground, R.string.AppIconBlurBlue),
+        DEFAULT("DefaultIcon", R.mipmap.ic_launcher_gorilla, R.drawable.transparent, R.string.AppIconGorilla),
         TELEGRAM("TelegramIcon", R.drawable.icon_background, R.mipmap.icon_foreground, R.string.AppIconTelegram),
         VINTAGE("VintageIcon", R.drawable.icon_6_background_sa, R.mipmap.icon_6_foreground_sa, R.string.AppIconVintage),
         AQUA("AquaIcon", R.drawable.icon_4_background_sa, R.mipmap.icon_foreground_sa, R.string.AppIconAqua),

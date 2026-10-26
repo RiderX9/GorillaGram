@@ -1743,6 +1743,12 @@ object NaConfig {
             ConfigItem.configTypeInt,
             2
         )
+    val fontStyle =
+        addConfig(
+            "FontStyle",
+            ConfigItem.configTypeInt,
+            0
+        )
     val ignoreUnreadCount =
         addConfig(
             "IgnoreUnreadCount",

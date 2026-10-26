@@ -58,6 +58,36 @@ public class TypefaceHelper {
         }
     }
 
+    public static Typeface getCustomFontStyleTypeface(int fontStyle, String assetPath) {
+        try {
+            boolean isBold = assetPath != null && (assetPath.contains("medium") || assetPath.contains("bold"));
+            boolean isItalic = assetPath != null && assetPath.contains("italic");
+            String fontFile = switch (fontStyle) {
+                case 1 -> isBold ? "fonts/custom/comic_bold.ttf" : "fonts/custom/comic_regular.ttf";
+                case 2 -> isBold ? "fonts/custom/zilla_bold.ttf" : "fonts/custom/zilla_regular.ttf";
+                case 3 -> isBold ? "fonts/custom/jetbrains_bold.ttf" : "fonts/custom/jetbrains_regular.ttf";
+                case 4 -> "fonts/custom/playfair_regular.ttf";
+                case 5 -> "fonts/custom/inter_regular.ttf";
+                case 6 -> isBold ? "fonts/custom/bold_bold.otf" : "fonts/custom/bold_regular.otf";
+                default -> null;
+            };
+            if (fontFile == null) return null;
+            Typeface tf = Typeface.createFromAsset(ApplicationLoader.applicationContext.getAssets(), fontFile);
+            if (isItalic || (isBold && (fontStyle == 4 || fontStyle == 5))) {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                    return Typeface.create(tf, isBold ? 700 : 400, isItalic);
+                } else {
+                    int style = (isBold && isItalic) ? Typeface.BOLD_ITALIC : (isBold ? Typeface.BOLD : (isItalic ? Typeface.ITALIC : Typeface.NORMAL));
+                    return Typeface.create(tf, style);
+                }
+            }
+            return tf;
+        } catch (Exception e) {
+            FileLog.e(e);
+            return null;
+        }
+    }
+
     public static Typeface createTypeface(String assetPath) {
         return switch (assetPath) {
             case AndroidUtilities.TYPEFACE_ROBOTO_MEDIUM -> {

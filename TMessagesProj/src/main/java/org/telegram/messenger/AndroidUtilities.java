@@ -269,6 +269,10 @@ public class AndroidUtilities {
     public static ThreadLocal<byte[]> bufferLocal = new ThreadLocal<>();
 
     public static Typeface bold() {
+        int fontStyle = xyz.nextalone.nagram.NaConfig.INSTANCE.getFontStyle().Int();
+        if (fontStyle != 0) {
+            return getTypeface(TYPEFACE_ROBOTO_MEDIUM);
+        }
         if (mediumTypeface == null) {
             if (SharedConfig.useSystemBoldFont && Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
                 mediumTypeface = Typeface.create(null, 500, false);
@@ -277,6 +281,11 @@ public class AndroidUtilities {
             }
         }
         return mediumTypeface;
+    }
+
+    public static void clearTypefaceCache() {
+        mediumTypeface = null;
+        typefaceCache.clear();
     }
 
     public static Typeface regular() {
@@ -2405,6 +2414,13 @@ public class AndroidUtilities {
     public static Typeface getTypeface(String assetPath) {
         return typefaceCache.computeIfAbsent(assetPath, path -> {
             try {
+                int fontStyle = xyz.nextalone.nagram.NaConfig.INSTANCE.getFontStyle().Int();
+                if (fontStyle != 0) {
+                    Typeface customTf = TypefaceHelper.getCustomFontStyleTypeface(fontStyle, path);
+                    if (customTf != null) {
+                        return customTf;
+                    }
+                }
                 if (NekoConfig.typeface.Bool()) {
                     return TypefaceHelper.createTypeface(path);
                 }

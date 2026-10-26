@@ -68,6 +68,15 @@ public class NekoAppearanceSettingsActivity extends BaseNekoXSettingsActivity {
     private final CellGroup cellGroup = new CellGroup(this);
 
     private final AbstractConfigCell headerAppearance = cellGroup.appendCell(new ConfigCellHeader(getString(R.string.Appearance)));
+    private final AbstractConfigCell fontStyleRow = cellGroup.appendCell(new ConfigCellSelectBox("FontStyle", NaConfig.INSTANCE.getFontStyle(), new String[]{
+            getString(R.string.Default),
+            "Comic Neue / Comic Sans",
+            "Zilla Slab",
+            "JetBrains Mono",
+            "Playfair Display",
+            "Inter",
+            "SF Pro (iOS)"
+    }, null));
     private final AbstractConfigCell typefaceRow = cellGroup.appendCell(new ConfigCellTextCheck(NekoConfig.typeface));
     private final AbstractConfigCell hideDividersRow = cellGroup.appendCell(new ConfigCellTextCheck(NaConfig.INSTANCE.getHideDividers()));
     private final AbstractConfigCell sectionsSeparatedHeadersRow = cellGroup.appendCell(new ConfigCellTextCheck(NaConfig.INSTANCE.getSectionsSeparatedHeaders(), null, getString(R.string.SeparateHeaders)));
@@ -268,6 +277,7 @@ public class NekoAppearanceSettingsActivity extends BaseNekoXSettingsActivity {
                     || key.equals(NekoConfig.tabStyleStroke.getKey())) {
                 getNotificationCenter().postNotificationName(NotificationCenter.dialogFiltersUpdated);
             } else if (key.equals(NaConfig.INSTANCE.getNotificationIcon().getKey())
+                    || key.equals(NaConfig.INSTANCE.getFontStyle().getKey())
                     || key.equals(NekoConfig.tabletMode.getKey())
                     || key.equals(NaConfig.INSTANCE.getHideDividers().getKey())
                     || key.equals(NekoConfig.typeface.getKey())
@@ -279,6 +289,9 @@ public class NekoAppearanceSettingsActivity extends BaseNekoXSettingsActivity {
                     || key.equals(NaConfig.INSTANCE.getDisableDialogsFloatingButton().getKey())
                     || key.equals(NaConfig.INSTANCE.getDisableBotOpenButton().getKey())
                     || key.equals(NekoConfig.navigationDrawerEnabled.getKey())) {
+                if (key.equals(NaConfig.INSTANCE.getFontStyle().getKey())) {
+                    AndroidUtilities.clearTypefaceCache();
+                }
                 tooltip.showWithAction(0, UndoView.ACTION_NEED_RESTART, null, null);
             } else if (key.equals(NaConfig.INSTANCE.getSectionsSeparatedHeaders().getKey())) {
                 if (listView != null) {

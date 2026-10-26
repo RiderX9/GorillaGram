@@ -132,7 +132,7 @@
     <string name="Other">Other</string>
     <string name="RestartApp">Restart App</string>
     <string name="ResetSettings">Reset Settings</string>
-    <string name="ResetSettingsAlert">Are you sure you want to reset all N-Settings?</string>
+    <string name="ResetSettingsAlert">Are you sure you want to reset all G-Settings?</string>
     <string name="DontAutoPlayNextVoice">Don\'t Auto Play Next Voice Message</string>
     <string name="SaveToChatSubfolder">Save Attachments by Chat Name</string>
     <string name="MessageColoredBackground">Colorful Message Backgrounds</string>
@@ -249,7 +249,7 @@
     <string name="CopySticker">Copy Sticker</string>
     <string name="NaxAboutInfo">Info</string>
     <string name="NaxLinks">Links</string>
-    <string name="NaxAboutDesc">A fork of Nagram X with additional features. Includes most features from exteraGram and AyuGram.</string>
+    <string name="NaxAboutDesc">GorillaGram - customized client with enhanced UI and features.</string>
     <string name="CheckUpdate">Check for Updates</string>
     <string name="AutoCheckUpdateOFF">OFF</string>
     <string name="AutoCheckUpdateSwitch">Update Channel</string>
@@ -268,6 +268,7 @@
     <string name="TranslationTargetApp">Follow App</string>
     <string name="SwitchStyle">Switch Style</string>
     <string name="SliderStyle">Slider Style</string>
+    <string name="FontStyle">Font Style</string>
     <string name="StyleModern">Modern</string>
     <string name="StyleMaterialDesign3" translatable="false">Material Design 3</string>
     <string name="SaveDeletedExclusionMenu">Save Deleted</string>

@@ -85,6 +85,7 @@ public class ChatInputViewsContainer extends FrameLayout {
     private boolean rightBubbleVisible;
     private int leftBubbleLeft, leftBubbleRight;
     private int rightBubbleLeft, rightBubbleRight;
+    private int leftBubbleHeight = dp(INPUT_SIDE_BUBBLE_SIZE);
 
     public void setLeftBubbleDrawable(BlurredBackgroundDrawable drawable) {
         leftBubbleDrawable = drawable;
@@ -97,8 +98,13 @@ public class ChatInputViewsContainer extends FrameLayout {
     }
 
     public void setLeftBubbleBounds(int left, int right) {
+        setLeftBubbleBounds(left, right, dp(INPUT_SIDE_BUBBLE_SIZE));
+    }
+
+    public void setLeftBubbleBounds(int left, int right, int height) {
         leftBubbleLeft = left;
         leftBubbleRight = right;
+        leftBubbleHeight = height > 0 ? height : dp(INPUT_SIDE_BUBBLE_SIZE);
         leftBubbleVisible = true;
         invalidate();
     }
@@ -108,6 +114,23 @@ public class ChatInputViewsContainer extends FrameLayout {
         rightBubbleRight = right;
         rightBubbleVisible = true;
         invalidate();
+    }
+
+    private float leftBubbleScale = 1.0f;
+    private float rightBubbleScale = 1.0f;
+
+    public void setLeftBubbleScale(float scale) {
+        if (leftBubbleScale != scale) {
+            leftBubbleScale = scale;
+            invalidate();
+        }
+    }
+
+    public void setRightBubbleScale(float scale) {
+        if (rightBubbleScale != scale) {
+            rightBubbleScale = scale;
+            invalidate();
+        }
     }
 
     private int sideBubblesAlpha = 255;
@@ -323,16 +346,30 @@ public class ChatInputViewsContainer extends FrameLayout {
 
         final int sideBubbleBottom = blurTop + (int) bubbleInputTranlationY + inputBubbleHeightRound;
         if (leftBubbleDrawable != null && leftBubbleVisible) {
-            tmpRect.set(leftBubbleLeft, sideBubbleBottom - dp(INPUT_SIDE_BUBBLE_SIZE), leftBubbleRight, sideBubbleBottom);
+            tmpRect.set(leftBubbleLeft, sideBubbleBottom - leftBubbleHeight, leftBubbleRight, sideBubbleBottom);
             leftBubbleDrawable.setBounds(tmpRect);
             leftBubbleDrawable.setAlpha(sideBubblesAlpha);
-            leftBubbleDrawable.draw(canvas);
+            if (leftBubbleScale != 1.0f) {
+                canvas.save();
+                canvas.scale(leftBubbleScale, leftBubbleScale, tmpRect.centerX(), sideBubbleBottom - dp(INPUT_SIDE_BUBBLE_SIZE) / 2f);
+                leftBubbleDrawable.draw(canvas);
+                canvas.restore();
+            } else {
+                leftBubbleDrawable.draw(canvas);
+            }
         }
         if (rightBubbleDrawable != null && rightBubbleVisible) {
             tmpRect.set(rightBubbleLeft, sideBubbleBottom - dp(INPUT_SIDE_BUBBLE_SIZE), rightBubbleRight, sideBubbleBottom);
             rightBubbleDrawable.setBounds(tmpRect);
             rightBubbleDrawable.setAlpha(sideBubblesAlpha);
-            rightBubbleDrawable.draw(canvas);
+            if (rightBubbleScale != 1.0f) {
+                canvas.save();
+                canvas.scale(rightBubbleScale, rightBubbleScale, tmpRect.centerX(), tmpRect.centerY());
+                rightBubbleDrawable.draw(canvas);
+                canvas.restore();
+            } else {
+                rightBubbleDrawable.draw(canvas);
+            }
         }
 
         if (needDrawInAppKeyboard) {
