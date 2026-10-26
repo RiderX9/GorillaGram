@@ -2711,6 +2711,7 @@ public class ChatActivityEnterView extends FrameLayout implements
         NotificationCenter.getInstance(currentAccount).addObserver(this, NotificationCenter.didUpdatePremiumGiftFieldIcon);
         NotificationCenter.getInstance(currentAccount).addObserver(this, NotificationCenter.currentUserPremiumStatusChanged);
         NotificationCenter.getGlobalInstance().addObserver(this, NotificationCenter.emojiLoaded);
+        NotificationCenter.getGlobalInstance().addObserver(this, NotificationCenter.reloadInterface);
 
         parentActivity = context;
         parentFragment = fragment;
@@ -3762,6 +3763,7 @@ public class ChatActivityEnterView extends FrameLayout implements
         checkChannelRights();
 
         createMessageEditText();
+        applyChatBarLayout();
     }
 
     public void setViewParentForEmoji(ViewGroup viewParent) {
@@ -7323,6 +7325,7 @@ if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.VANILLA_ICE_CREAM) {
         NotificationCenter.getInstance(currentAccount).removeObserver(this, NotificationCenter.didUpdatePremiumGiftFieldIcon);
         NotificationCenter.getInstance(currentAccount).removeObserver(this, NotificationCenter.currentUserPremiumStatusChanged);
         NotificationCenter.getGlobalInstance().removeObserver(this, NotificationCenter.emojiLoaded);
+        NotificationCenter.getGlobalInstance().removeObserver(this, NotificationCenter.reloadInterface);
         if (emojiView != null) {
             emojiView.onDestroy();
         }
@@ -14800,6 +14803,10 @@ if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.VANILLA_ICE_CREAM) {
     @SuppressWarnings("unchecked")
     @Override
     public void didReceivedNotification(int id, int account, Object... args) {
+        if (id == NotificationCenter.reloadInterface) {
+            applyChatBarLayout();
+            return;
+        }
         if (id == NotificationCenter.fileLoaded || id == NotificationCenter.fileLoadFailed) {
             ArrayList<PendingCustomEmojiStickerSend> pendingSends = args[0] instanceof String ? pendingCustomEmojiStickerSends.remove(args[0]) : null;
             if (pendingSends != null && id == NotificationCenter.fileLoaded) {
@@ -16498,6 +16505,99 @@ if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.VANILLA_ICE_CREAM) {
         emojiButton.setScaleX(emojiButtonPaddingScale * emojiButtonScale);
         emojiButton.setScaleY(emojiButtonPaddingScale * emojiButtonScale);
         emojiButton.setAlpha(emojiButtonPaddingAlpha * emojiButtonAlpha);
+    }
+
+    public void applyChatBarLayout() {
+        if (messageEditTextContainer == null || textFieldContainer == null) {
+            return;
+        }
+        java.util.List<Integer> active = tw.nekomimi.nekogram.helpers.ChatBarOrderHelper.getActiveItems();
+        java.util.List<Integer> hidden = tw.nekomimi.nekogram.helpers.ChatBarOrderHelper.getHiddenItems();
+
+        if (hidden.contains(tw.nekomimi.nekogram.helpers.ChatBarOrderHelper.ID_AI) && aiButton != null) {
+            aiButton.setVisibility(View.GONE);
+        }
+        if (hidden.contains(tw.nekomimi.nekogram.helpers.ChatBarOrderHelper.ID_EMOJI) && emojiButton != null) {
+            emojiButton.setVisibility(View.GONE);
+        }
+        if (hidden.contains(tw.nekomimi.nekogram.helpers.ChatBarOrderHelper.ID_ATTACH) && attachButton != null) {
+            attachButton.setVisibility(View.GONE);
+            if (attachLayout != null) attachLayout.setVisibility(View.GONE);
+        }
+        if (hidden.contains(tw.nekomimi.nekogram.helpers.ChatBarOrderHelper.ID_MIC_SEND) && sendButtonContainer != null) {
+            sendButtonContainer.setVisibility(View.GONE);
+        }
+
+        boolean micOnLeft = !active.isEmpty() && active.get(0) == tw.nekomimi.nekogram.helpers.ChatBarOrderHelper.ID_MIC_SEND;
+
+        if (sendButtonContainer != null && !hidden.contains(tw.nekomimi.nekogram.helpers.ChatBarOrderHelper.ID_MIC_SEND)) {
+            FrameLayout.LayoutParams lpSend = (FrameLayout.LayoutParams) sendButtonContainer.getLayoutParams();
+            if (lpSend != null) {
+                lpSend.gravity = Gravity.BOTTOM | (micOnLeft ? Gravity.LEFT : Gravity.RIGHT);
+                sendButtonContainer.setLayoutParams(lpSend);
+            }
+            FrameLayout.LayoutParams lpContainer = (FrameLayout.LayoutParams) messageEditTextContainer.getLayoutParams();
+            if (lpContainer != null) {
+                if (micOnLeft) {
+                    lpContainer.leftMargin = dp(DEFAULT_HEIGHT);
+                    lpContainer.rightMargin = 0;
+                } else {
+                    lpContainer.leftMargin = 0;
+                    lpContainer.rightMargin = dp(DEFAULT_HEIGHT);
+                }
+                messageEditTextContainer.setLayoutParams(lpContainer);
+            }
+        }
+
+        int attachIndex = active.indexOf(tw.nekomimi.nekogram.helpers.ChatBarOrderHelper.ID_ATTACH);
+        int emojiIndex = active.indexOf(tw.nekomimi.nekogram.helpers.ChatBarOrderHelper.ID_EMOJI);
+
+        boolean attachOnLeft = attachIndex != -1 && (emojiIndex == -1 || attachIndex < emojiIndex);
+        boolean emojiOnLeft = !attachOnLeft;
+
+        if (attachButton != null && !hidden.contains(tw.nekomimi.nekogram.helpers.ChatBarOrderHelper.ID_ATTACH)) {
+            FrameLayout.LayoutParams lpAttach = (FrameLayout.LayoutParams) attachButton.getLayoutParams();
+            if (lpAttach != null) {
+                lpAttach.gravity = Gravity.BOTTOM | (attachOnLeft ? Gravity.LEFT : Gravity.RIGHT);
+                if (attachOnLeft) {
+                    lpAttach.leftMargin = dp(2);
+                    lpAttach.rightMargin = 0;
+                } else {
+                    lpAttach.leftMargin = 0;
+                    lpAttach.rightMargin = 0;
+                }
+                attachButton.setLayoutParams(lpAttach);
+            }
+        }
+
+        if (emojiButton != null && !hidden.contains(tw.nekomimi.nekogram.helpers.ChatBarOrderHelper.ID_EMOJI)) {
+            FrameLayout.LayoutParams lpEmoji = (FrameLayout.LayoutParams) emojiButton.getLayoutParams();
+            if (lpEmoji != null) {
+                lpEmoji.gravity = Gravity.BOTTOM | (emojiOnLeft ? Gravity.LEFT : Gravity.RIGHT);
+                if (emojiOnLeft) {
+                    lpEmoji.leftMargin = dp(2);
+                    lpEmoji.rightMargin = 0;
+                } else {
+                    lpEmoji.leftMargin = 0;
+                    lpEmoji.rightMargin = dp(2);
+                }
+                emojiButton.setLayoutParams(lpEmoji);
+            }
+        }
+
+        if (messageEditText != null) {
+            FrameLayout.LayoutParams lpEdit = (FrameLayout.LayoutParams) messageEditText.getLayoutParams();
+            if (lpEdit != null) {
+                boolean hasLeftButton = (attachOnLeft && !hidden.contains(tw.nekomimi.nekogram.helpers.ChatBarOrderHelper.ID_ATTACH))
+                        || (emojiOnLeft && !hidden.contains(tw.nekomimi.nekogram.helpers.ChatBarOrderHelper.ID_EMOJI));
+                boolean hasRightButton = (!attachOnLeft && !hidden.contains(tw.nekomimi.nekogram.helpers.ChatBarOrderHelper.ID_ATTACH))
+                        || (!emojiOnLeft && !hidden.contains(tw.nekomimi.nekogram.helpers.ChatBarOrderHelper.ID_EMOJI));
+
+                lpEdit.leftMargin = dp(hasLeftButton ? 52 : 12);
+                lpEdit.rightMargin = dp(hasRightButton ? 50 : 12);
+                messageEditText.setLayoutParams(lpEdit);
+            }
+        }
     }
 
     public void setOverrideHint(CharSequence overrideHint) {
