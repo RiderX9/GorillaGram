@@ -109,13 +109,13 @@
         android:restoreAnyVersion="true"
         android:backupAgent=".BackupAgent"
         android:hardwareAccelerated="true"
-        android:icon="@mipmap/ic_launcher_nagram_dark_blue"
+        android:icon="@mipmap/ic_launcher_gorilla"
         android:label="@string/AppName"
         android:largeHeap="true"
         android:theme="@style/Theme.TMessages.Start"
         android:manageSpaceActivity="org.telegram.ui.ExternalActionActivity"
         android:networkSecurityConfig="@xml/network_security_config"
-        android:roundIcon="@mipmap/ic_launcher_nagram_dark_blue_round"
+        android:roundIcon="@mipmap/ic_launcher_gorilla_round"
         android:supportsRtl="false"
         android:requestLegacyExternalStorage="true"
         android:hasFragileUserData="true"
@@ -128,11 +128,11 @@
         <!-- usesCleartextTraffic for browser supporting opening http:// links -->
 
         <activity-alias
-            android:enabled="false"
+            android:enabled="true"
             android:name="org.telegram.messenger.DefaultIcon"
             android:targetActivity="org.telegram.ui.LaunchActivity"
-            android:icon="@mipmap/ic_launcher_nagram"
-            android:roundIcon="@mipmap/ic_launcher_nagram_round"
+            android:icon="@mipmap/ic_launcher_gorilla"
+            android:roundIcon="@mipmap/ic_launcher_gorilla_round"
             android:exported="true">
 
             <intent-filter>
@@ -240,11 +240,11 @@
         </activity-alias>
 
         <activity-alias
-            android:enabled="true"
+            android:enabled="false"
             android:name="org.telegram.messenger.DarkBlueIcon"
             android:targetActivity="org.telegram.ui.LaunchActivity"
-            android:icon="@mipmap/ic_launcher_nagram_dark_blue"
-            android:roundIcon="@mipmap/ic_launcher_nagram_dark_blue_round"
+            android:icon="@mipmap/ic_launcher_gorilla"
+            android:roundIcon="@mipmap/ic_launcher_gorilla_round"
             android:exported="true">
 
             <intent-filter>

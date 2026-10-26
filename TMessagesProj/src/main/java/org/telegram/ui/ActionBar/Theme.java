@@ -1537,6 +1537,14 @@ public class Theme {
                 return getString(R.string.ThemeDay);
             } else if ("Night".equals(name)) {
                 return getString(R.string.ThemeNight);
+            } else if ("Gorilla Green Light".equals(name)) {
+                return getString(R.string.ThemeGorillaGreenLight);
+            } else if ("Gorilla Green Dark".equals(name)) {
+                return getString(R.string.ThemeGorillaGreenDark);
+            } else if ("Gorilla Blue Light".equals(name)) {
+                return getString(R.string.ThemeGorillaBlueLight);
+            } else if ("Gorilla Blue Dark".equals(name)) {
+                return getString(R.string.ThemeGorillaBlueDark);
             }
             return info != null ? info.title : name;
         }
@@ -1661,9 +1669,9 @@ public class Theme {
             if (isDark != UNKNOWN) {
                 return isDark == DARK;
             }
-            if ("Dark Blue".equals(name) || "Night".equals(name) || "AMOLED".equals(name) || "Monet Dark".equals(name) || "Monet AMOLED".equals(name)) {
+            if ("Dark Blue".equals(name) || "Night".equals(name) || "AMOLED".equals(name) || "Monet Dark".equals(name) || "Monet AMOLED".equals(name) || "Gorilla Green Dark".equals(name) || "Gorilla Blue Dark".equals(name)) {
                 isDark = DARK;
-            } else if ("Blue".equals(name) || "Arctic Blue".equals(name) || "Day".equals(name) || "Monet Light".equals(name)) {
+            } else if ("Blue".equals(name) || "Arctic Blue".equals(name) || "Day".equals(name) || "Monet Light".equals(name) || "Gorilla Green Light".equals(name) || "Gorilla Blue Light".equals(name)) {
                 isDark = LIGHT;
             }
             if (isDark == UNKNOWN && pathToFile != null) {
@@ -4096,6 +4104,46 @@ public class Theme {
             themes.add(themeInfo);
             themesDict.put("Monet AMOLED", themeInfo);
         }
+
+        themeInfo = new ThemeInfo();
+        themeInfo.name = "Gorilla Green Light";
+        themeInfo.assetName = "gorilla_green_light.attheme";
+        themeInfo.previewBackgroundColor = 0xfff4f9f5;
+        themeInfo.previewInColor = 0xffffffff;
+        themeInfo.previewOutColor = 0xff2e7d32;
+        themeInfo.sortIndex = 9;
+        themes.add(themeInfo);
+        themesDict.put("Gorilla Green Light", themeInfo);
+
+        themeInfo = new ThemeInfo();
+        themeInfo.name = "Gorilla Green Dark";
+        themeInfo.assetName = "gorilla_green_dark.attheme";
+        themeInfo.previewBackgroundColor = 0xff0e1712;
+        themeInfo.previewInColor = 0xff18261e;
+        themeInfo.previewOutColor = 0xff1b4d33;
+        themeInfo.sortIndex = 10;
+        themes.add(themeInfo);
+        themesDict.put("Gorilla Green Dark", themeInfo);
+
+        themeInfo = new ThemeInfo();
+        themeInfo.name = "Gorilla Blue Light";
+        themeInfo.assetName = "gorilla_blue_light.attheme";
+        themeInfo.previewBackgroundColor = 0xfff0f7ff;
+        themeInfo.previewInColor = 0xffffffff;
+        themeInfo.previewOutColor = 0xff0284c7;
+        themeInfo.sortIndex = 11;
+        themes.add(themeInfo);
+        themesDict.put("Gorilla Blue Light", themeInfo);
+
+        themeInfo = new ThemeInfo();
+        themeInfo.name = "Gorilla Blue Dark";
+        themeInfo.assetName = "gorilla_blue_dark.attheme";
+        themeInfo.previewBackgroundColor = 0xff0a0f18;
+        themeInfo.previewInColor = 0xff142030;
+        themeInfo.previewOutColor = 0xff173b6b;
+        themeInfo.sortIndex = 12;
+        themes.add(themeInfo);
+        themesDict.put("Gorilla Blue Dark", themeInfo);
 
         String themesString = themeConfig.getString("themes2", null);
 
