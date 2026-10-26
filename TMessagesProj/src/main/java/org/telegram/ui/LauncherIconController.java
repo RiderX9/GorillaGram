@@ -9,19 +9,27 @@ import org.telegram.messenger.R;
 
 public class LauncherIconController {
     public static void tryFixLauncherIconIfNeeded() {
+        android.content.SharedPreferences prefs = ApplicationLoader.applicationContext.getSharedPreferences("gorillagram_app", Context.MODE_PRIVATE);
+        boolean initialized = prefs.getBoolean("gorilla_icon_initialized_v2", false);
+        if (!initialized) {
+            setIcon(LauncherIcon.DEFAULT);
+            prefs.edit().putBoolean("gorilla_icon_initialized_v2", true).apply();
+            return;
+        }
+
         for (LauncherIcon icon : LauncherIcon.values()) {
             if (isEnabled(icon)) {
                 return;
             }
         }
 
-        setIcon(LauncherIcon.DARKBLUE);
+        setIcon(LauncherIcon.DEFAULT);
     }
 
     public static boolean isEnabled(LauncherIcon icon) {
         Context ctx = ApplicationLoader.applicationContext;
         int i = ctx.getPackageManager().getComponentEnabledSetting(icon.getComponentName(ctx));
-        return i == PackageManager.COMPONENT_ENABLED_STATE_ENABLED || i == PackageManager.COMPONENT_ENABLED_STATE_DEFAULT && icon == LauncherIcon.DARKBLUE;
+        return i == PackageManager.COMPONENT_ENABLED_STATE_ENABLED || (i == PackageManager.COMPONENT_ENABLED_STATE_DEFAULT && icon == LauncherIcon.DEFAULT);
     }
 
     public static void setIcon(LauncherIcon icon) {

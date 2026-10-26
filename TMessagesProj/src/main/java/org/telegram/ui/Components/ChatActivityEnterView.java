@@ -7883,7 +7883,7 @@ if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.VANILLA_ICE_CREAM) {
 
         if (use) {
             attachButton.setTag(1);
-            if (!isIOSInputStyle()) {
+            if (!isIOSInputStyle() && !isAttachButtonOnLeft()) {
                 attachButton.setVisibility(GONE);
             }
             if (delegate != null)
@@ -9262,9 +9262,15 @@ if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.VANILLA_ICE_CREAM) {
                                     animators.add(ObjectAnimator.ofFloat(attachButton, View.SCALE_Y, fadeAttach ? 0.5f : 1.0f));
                                 }
                             } else if (attachButton != null && (!NekoConfig.useChatAttachMediaMenu.Bool() || isStories) && !isIOSInputStyle()) {
-                                animators.add(ObjectAnimator.ofFloat(attachButton, View.ALPHA, attachButtonAlpha = 0.0f));
-                                animators.add(ObjectAnimator.ofFloat(attachButton, View.SCALE_X, 0.5f));
-                                animators.add(ObjectAnimator.ofFloat(attachButton, View.SCALE_Y, 0.5f));
+                                if (!isAttachButtonOnLeft()) {
+                                    animators.add(ObjectAnimator.ofFloat(attachButton, View.ALPHA, attachButtonAlpha = 0.0f));
+                                    animators.add(ObjectAnimator.ofFloat(attachButton, View.SCALE_X, 0.5f));
+                                    animators.add(ObjectAnimator.ofFloat(attachButton, View.SCALE_Y, 0.5f));
+                                } else {
+                                    attachButton.setAlpha(attachButtonAlpha = 1.0f);
+                                    attachButton.setScaleX(1.0f);
+                                    attachButton.setScaleY(1.0f);
+                                }
                             }
                             boolean hasScheduled = delegate != null && delegate.hasScheduledMessages();
                             scheduleButtonHidden = true;
@@ -9474,9 +9480,16 @@ if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.VANILLA_ICE_CREAM) {
                                     attachButton.setScaleY(fadeAttach ? 0.5f : 1.0f);
                                 }
                             } else if (attachButton != null && !isIOSInputStyle()) {
-                                attachButton.setAlpha(attachButtonAlpha = 0.0f);
-                                attachButton.setScaleX(0.5f);
-                                attachButton.setScaleY(0.5f);
+                                if (!isAttachButtonOnLeft()) {
+                                    attachButton.setAlpha(attachButtonAlpha = 0.0f);
+                                    attachButton.setScaleX(0.5f);
+                                    attachButton.setScaleY(0.5f);
+                                } else {
+                                    attachButton.setAlpha(attachButtonAlpha = 1.0f);
+                                    attachButton.setScaleX(1.0f);
+                                    attachButton.setScaleY(1.0f);
+                                    attachButton.setVisibility(VISIBLE);
+                                }
                             }
                         } else {
                              if (attachLayout != null) {
@@ -16505,6 +16518,13 @@ if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.VANILLA_ICE_CREAM) {
         emojiButton.setScaleX(emojiButtonPaddingScale * emojiButtonScale);
         emojiButton.setScaleY(emojiButtonPaddingScale * emojiButtonScale);
         emojiButton.setAlpha(emojiButtonPaddingAlpha * emojiButtonAlpha);
+    }
+
+    public boolean isAttachButtonOnLeft() {
+        java.util.List<Integer> active = tw.nekomimi.nekogram.helpers.ChatBarOrderHelper.getActiveItems();
+        int attachIndex = active.indexOf(tw.nekomimi.nekogram.helpers.ChatBarOrderHelper.ID_ATTACH);
+        int emojiIndex = active.indexOf(tw.nekomimi.nekogram.helpers.ChatBarOrderHelper.ID_EMOJI);
+        return attachIndex != -1 && (emojiIndex == -1 || attachIndex < emojiIndex);
     }
 
     public void applyChatBarLayout() {

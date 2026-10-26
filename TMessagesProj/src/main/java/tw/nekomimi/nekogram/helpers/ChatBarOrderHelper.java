@@ -36,7 +36,7 @@ public class ChatBarOrderHelper {
     public static final List<Entry> ALL_ENTRIES = Arrays.asList(
             new Entry(ID_EMOJI, R.string.ChatBarItemEmoji, R.drawable.smiles_tab_smiles),
             new Entry(ID_ATTACH, R.string.ChatBarItemAttach, R.drawable.msg_input_attach2),
-            new Entry(ID_MIC_SEND, R.string.ChatBarItemMicSend, R.drawable.msg_voice),
+            new Entry(ID_MIC_SEND, R.string.ChatBarItemMicSend, R.drawable.input_mic),
             new Entry(ID_AI, R.string.ChatBarItemAI, R.drawable.msg_bot)
     );
 

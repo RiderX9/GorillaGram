@@ -266,10 +266,12 @@ public class MainTabsActivity extends ViewPagerActivity implements NotificationC
     }
 
     private int getEstBackgroundColor() {
+        int chatsIndex = getTabIndex(MainTabsConfigManager.TabType.CHATS);
+        float chatsVisibility = (viewPager != null && chatsIndex >= 0) ? viewPager.getPositionVisibility(chatsIndex) : 1f;
         return ColorUtils.blendARGB(
                 getThemedColor(Theme.key_windowBackgroundGray),
                 getThemedColor(Theme.key_windowBackgroundWhite),
-                viewPager != null ? viewPager.getPositionVisibility(0) : 1);
+                chatsVisibility);
     }
 
     private boolean tabletLayout;
@@ -1228,8 +1230,10 @@ public class MainTabsActivity extends ViewPagerActivity implements NotificationC
 
         final float animatedPosition = viewPager.getPositionAnimated();
         final int profilePosition = getTabIndex(MainTabsConfigManager.TabType.PROFILE);
-        final float isProfile = profilePosition >= 0
-            ? 1f - MathUtils.clamp(Math.abs(profilePosition - animatedPosition), 0, 1)
+        final int settingsPosition = getTabIndex(MainTabsConfigManager.TabType.SETTINGS);
+        int targetProfile = profilePosition >= 0 ? profilePosition : settingsPosition;
+        final float isProfile = targetProfile >= 0
+            ? 1f - MathUtils.clamp(Math.abs(targetProfile - animatedPosition), 0, 1)
             : 0f;
         final float hide = 1f - AndroidUtilities.getNavigationBarThirdButtonsFactor(0, 1f, navigationBarHeight);
         final float scrollHideFactor = animatorTabsScrollHide.getFloatValue();

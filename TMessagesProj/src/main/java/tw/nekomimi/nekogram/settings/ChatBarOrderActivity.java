@@ -2,7 +2,6 @@ package tw.nekomimi.nekogram.settings;
 
 import static org.telegram.messenger.LocaleController.getString;
 
-import android.annotation.SuppressLint;
 import android.content.Context;
 import android.view.View;
 import android.view.ViewGroup;
@@ -12,7 +11,6 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import org.telegram.messenger.R;
 import org.telegram.ui.ActionBar.ActionBarMenuItem;
-import org.telegram.ui.ActionBar.Theme;
 import org.telegram.ui.Cells.TextCell;
 import org.telegram.ui.Cells.TextInfoPrivacyCell;
 
@@ -105,33 +103,33 @@ public class ChatBarOrderActivity extends BaseReorderManagerActivity {
             }
         });
 
-        listView.setOnItemClickListener((view1, position) -> {
-            if (isInActiveSection(position)) {
-                int index = position - activeRowStart;
-                if (index >= 0 && index < activeItems.size()) {
-                    // Must have at least 1 active item
-                    if (activeItems.size() <= 1) {
-                        return;
-                    }
-                    Integer item = activeItems.remove(index);
-                    hiddenItems.add(item);
-                    saveData();
-                    updateRows();
-                    updateResetButtonVisibility();
-                }
-            } else if (isInHiddenSection(position)) {
-                int index = position - hiddenRowStart;
-                if (index >= 0 && index < hiddenItems.size()) {
-                    Integer item = hiddenItems.remove(index);
-                    activeItems.add(item);
-                    saveData();
-                    updateRows();
-                    updateResetButtonVisibility();
-                }
-            }
-        });
-
         return view;
+    }
+
+    @Override
+    protected void onItemClick(View view, int position, float x, float y) {
+        if (isInActiveSection(position)) {
+            int index = position - activeRowStart;
+            if (index >= 0 && index < activeItems.size()) {
+                if (activeItems.size() <= 1) {
+                    return;
+                }
+                Integer item = activeItems.remove(index);
+                hiddenItems.add(item);
+                saveData();
+                updateRows();
+                updateResetButtonVisibility();
+            }
+        } else if (isInHiddenSection(position)) {
+            int index = position - hiddenRowStart;
+            if (index >= 0 && index < hiddenItems.size()) {
+                Integer item = hiddenItems.remove(index);
+                activeItems.add(item);
+                saveData();
+                updateRows();
+                updateResetButtonVisibility();
+            }
+        }
     }
 
     private void saveData() {
@@ -225,7 +223,7 @@ public class ChatBarOrderActivity extends BaseReorderManagerActivity {
                 } else if (position == hiddenHeaderRow) {
                     cell.setText(getString(R.string.ChatBarHiddenElements));
                 }
-            } else if (viewType == TYPE_ITEM) {
+            } else if (viewType == TYPE_TEXT) {
                 TextCell cell = (TextCell) holder.itemView;
                 int itemId = -1;
                 boolean isActive = false;
@@ -266,7 +264,7 @@ public class ChatBarOrderActivity extends BaseReorderManagerActivity {
             } else if (position == activeInfoRow || position == hiddenInfoRow) {
                 return TYPE_INFO_PRIVACY;
             }
-            return TYPE_ITEM;
+            return TYPE_TEXT;
         }
 
         @Override
