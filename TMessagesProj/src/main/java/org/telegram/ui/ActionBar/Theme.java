@@ -8101,7 +8101,7 @@ public class Theme {
         setDrawableColorByKey(dialogs_pollMentionDrawable, key_color_purple);
 
         setDrawableColorByKey(dialogs_mentionDrawableMuted, key_chats_unreadCounterMuted);
-        setDrawableColorByKey(dialogs_reactionsMentionDrawableMuted, key_chats_unreadCounterMuted);
+        setDrawableColorByKey(dialogs_reactionsMentionDrawableMuted, key_dialogReactionMentionBackground);
         setDrawableColorByKey(dialogs_pollMentionDrawableMuted, key_chats_unreadCounterMuted);
 
         setDrawableColorByKey(dialogs_forum_arrowDrawable, key_chats_message);

@@ -3,20 +3,11 @@
     <string name="AppIconTelegram">Telegram</string>
     <string name="AppIconNagram">Nagram</string>
     <string name="AppIconGorilla">Gorilla</string>
+    <string name="AppIconRed">Red</string>
     <string name="ThemeGorillaGreenLight">Gorilla Green Light</string>
     <string name="ThemeGorillaGreenDark">Gorilla Green Dark</string>
     <string name="ThemeGorillaBlueLight">Gorilla Blue Light</string>
     <string name="ThemeGorillaBlueDark">Gorilla Blue Dark</string>
-    <!-- Chat Bar Reorder -->
-    <string name="ChatBarElements">Chat Bar Elements</string>
-    <string name="ChatBarElementsInfo">Customize and reorder buttons in the message input bar</string>
-    <string name="ChatBarActiveElements">Active Buttons</string>
-    <string name="ChatBarHiddenElements">Hidden Buttons</string>
-    <string name="ChatBarReorderHint">Tap a button to toggle its visibility. Drag to reorder.</string>
-    <string name="ChatBarItemEmoji">Stickers, GIFs &amp; Emoji</string>
-    <string name="ChatBarItemAttach">Files &amp; Media Attachments</string>
-    <string name="ChatBarItemMicSend">Microphone &amp; Send</string>
-    <string name="ChatBarItemAI">AI Assistant</string>
     <!-- Pillstack (ported from exteragram/ayuGram) -->
     <string name="PillStackPills">Pill Stack</string>
     <string name="PillStackPillsInfo">Display interactive pills in the search field</string>
@@ -169,6 +160,8 @@
     <string name="JoinDateChat">You joined **%1$s** on **%2$s**.</string>
     <string name="CreationDateUserApproximately">**%1$s** created their account approximately on **%2$s**.</string>
     <string name="CreationDateSelfApproximately">You created your account approximately on **%1$s**.</string>
+    <string name="Registered">Registered</string>
+    <string name="JoinedGroupNamed">Joined %1$s</string>
     <string name="ForceSnowfall">Force Snowfall</string>
     <string name="ForceSnowfallInfo">Always show the snowfall effect on the title bar, side drawer and chat background, regardless of the date.</string>
     <string name="CameraType">Camera type</string>

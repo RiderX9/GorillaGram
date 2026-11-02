@@ -22,6 +22,8 @@ public class JoinOfficialChannelHelper {
     private static final String SHOWN_KEY = "first_join_official_channel_shown";
 
     public static void postCheck(Context ctx, int currentAccount) {
+        // Disabled prompt to join official channel
+        if (true) return;
         if (ctx == null) return;
         if (NekoConfig.getPreferences().getBoolean(SHOWN_KEY, false)) return;
 

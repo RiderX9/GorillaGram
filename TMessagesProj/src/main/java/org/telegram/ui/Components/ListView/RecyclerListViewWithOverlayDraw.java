@@ -2,6 +2,7 @@ package org.telegram.ui.Components.ListView;
 
 import android.content.Context;
 import android.graphics.Canvas;
+import android.graphics.RectF;
 import android.view.View;
 
 import org.telegram.ui.Components.RecyclerListView;
@@ -26,6 +27,27 @@ public class RecyclerListViewWithOverlayDraw extends RecyclerListView {
             }
         }
         super.dispatchDraw(canvas);
+    }
+
+    @Override
+    public void capture(Canvas canvas, RectF position) {
+        for (int i = 0; i < getChildCount(); i++) {
+            View child = getChildAt(i);
+            if (child instanceof OverlayView) {
+                float left = child.getX();
+                float top = child.getY();
+                float right = left + child.getWidth();
+                float bottom = top + child.getHeight();
+                if (position.intersects(left, top, right, bottom)) {
+                    canvas.save();
+                    canvas.clipRect(left, top, right, bottom);
+                    canvas.translate(left, top);
+                    ((OverlayView) child).preDraw(this, canvas);
+                    canvas.restore();
+                }
+            }
+        }
+        super.capture(canvas, position);
     }
 
     @Override

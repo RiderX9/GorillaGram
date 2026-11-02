@@ -454,6 +454,12 @@ public class PhotoViewer implements NotificationCenter.NotificationCenterDelegat
         SimpleTextView[] titleTextView;
         AnimatedTextView subtitleTextView;
 
+        public void updateLeftPadding(boolean hasBackButton) {
+            if (container != null) {
+                container.setPadding(centerTitle ? 0 : (hasBackButton ? dp((AndroidUtilities.isTablet() ? 80 : 72) - 16) : 0), 0, 0, 0);
+            }
+        }
+
         public PhotoViewerActionBarContainer(Context context) {
             super(context);
 
@@ -954,6 +960,7 @@ public class PhotoViewer implements NotificationCenter.NotificationCenterDelegat
     private FrameLayout topBulletinUnderCaption;
     private FrameLayout bottomBulletinUnderCaption;
     private ChatActivityEnterView.SendButton pickerViewSendButton;
+    private ImageView pickerViewBackButton;
     private PhotoViewerPollAttachButtons pollAttachButtons;
     private PickerBottomLayoutViewer editorDoneLayout;
     private TextView resetButton;
@@ -6411,13 +6418,20 @@ public class PhotoViewer implements NotificationCenter.NotificationCenterDelegat
 
             @Override
             protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
-                ((LayoutParams) itemsLayout.getLayoutParams()).rightMargin = pickerViewSendButton.getVisibility() == View.VISIBLE ? dp(63) : 0;
+                boolean ios = tw.nekomimi.nekogram.NekoConfig.iOSMessageInputField.Bool();
+                int rightMargin = pickerViewSendButton.getVisibility() == View.VISIBLE ? dp(63) : 0;
+                int leftMargin = (ios && pickerViewBackButton != null && pickerViewBackButton.getVisibility() == View.VISIBLE) ? dp(63) : 0;
+                ((LayoutParams) itemsLayout.getLayoutParams()).rightMargin = rightMargin;
+                ((LayoutParams) itemsLayout.getLayoutParams()).leftMargin = leftMargin;
                 super.onMeasure(widthMeasureSpec, heightMeasureSpec);
             }
 
             @Override
             public void setTranslationY(float translationY) {
                 super.setTranslationY(translationY);
+                if (pickerViewBackButton != null) {
+                    pickerViewBackButton.setTranslationY(translationY);
+                }
                 if (videoTimelineViewContainer != null && videoTimelineViewContainer.getVisibility() != GONE) {
                     videoTimelineViewContainer.setTranslationY(pickerView.getTranslationY() - Math.max(0, captionEdit.getEditTextHeight() - dp(46)) * captionEdit.getAlpha());
                 }
@@ -6432,6 +6446,9 @@ public class PhotoViewer implements NotificationCenter.NotificationCenterDelegat
             @Override
             public void setAlpha(float alpha) {
                 super.setAlpha(alpha);
+                if (pickerViewBackButton != null) {
+                    pickerViewBackButton.setAlpha(alpha);
+                }
                 if (videoTimelineViewContainer != null && videoTimelineViewContainer.getVisibility() != GONE) {
                     videoTimelineViewContainer.setAlpha(alpha);
                 }
@@ -6446,6 +6463,17 @@ public class PhotoViewer implements NotificationCenter.NotificationCenterDelegat
             @Override
             public void setVisibility(int visibility) {
                 super.setVisibility(visibility);
+                if (pickerViewBackButton != null) {
+                    boolean ios = tw.nekomimi.nekogram.NekoConfig.iOSMessageInputField.Bool();
+                    boolean showBack = visibility == VISIBLE && ios && pickerViewSendButton != null && pickerViewSendButton.getVisibility() == View.VISIBLE;
+                    pickerViewBackButton.setVisibility(showBack ? VISIBLE : GONE);
+                    if (actionBar != null && actionBar.backButtonImageView != null) {
+                        actionBar.backButtonImageView.setVisibility(showBack ? View.GONE : View.VISIBLE);
+                    }
+                    if (actionBarContainer != null) {
+                        actionBarContainer.updateLeftPadding(!showBack);
+                    }
+                }
                 if (videoTimelineViewContainer != null && videoTimelineViewContainer.getVisibility() != GONE) {
                     videoTimelineViewContainer.setVisibility(visibility == VISIBLE ? VISIBLE : INVISIBLE);
                 }
@@ -6455,8 +6483,10 @@ public class PhotoViewer implements NotificationCenter.NotificationCenterDelegat
             protected void onLayout(boolean changed, int left, int top, int right, int bottom) {
                 super.onLayout(changed, left, top, right, bottom);
                 if (itemsLayout.getVisibility() != GONE) {
+                    boolean ios = tw.nekomimi.nekogram.NekoConfig.iOSMessageInputField.Bool();
                     int rightMargin = pickerViewSendButton.getVisibility() == View.VISIBLE ? dp(63) : 0;
-                    int x = (right - left - rightMargin - itemsLayout.getMeasuredWidth()) / 2;
+                    int leftMargin = (ios && pickerViewBackButton != null && pickerViewBackButton.getVisibility() == View.VISIBLE) ? dp(63) : 0;
+                    int x = leftMargin + (right - left - leftMargin - rightMargin - itemsLayout.getMeasuredWidth()) / 2;
                     itemsLayout.layout(x, itemsLayout.getTop(), x + itemsLayout.getMeasuredWidth(), itemsLayout.getTop() + itemsLayout.getMeasuredHeight());
                 }
             }
@@ -7567,6 +7597,20 @@ public class PhotoViewer implements NotificationCenter.NotificationCenterDelegat
         containerView.addView(pickerViewSendButton, LayoutHelper.createFrame(120, 120, Gravity.RIGHT | Gravity.BOTTOM, 0, 0, 8, 2f));
         pickerViewSendButton.setContentDescription(getString("Send", R.string.Send));
         ScaleStateListAnimator.apply(pickerViewSendButton);
+
+        pickerViewBackButton = new ImageView(parentActivity);
+        pickerViewBackButton.setScaleType(ImageView.ScaleType.CENTER);
+        pickerViewBackButton.setImageResource(R.drawable.ic_ab_back);
+        pickerViewBackButton.setColorFilter(new PorterDuffColorFilter(0xFFFFFFFF, PorterDuff.Mode.SRC_IN));
+        pickerViewBackButton.setBackground(iBlur3FactoryFrostedLiquidGlass.create(pickerViewBackButton)
+            .setColorProvider(BlurredBackgroundProviderImpl.photoViewer(resourcesProvider))
+            .setPadding(dp(2))
+            .setRadius(dp(24)));
+        containerView.addView(pickerViewBackButton, LayoutHelper.createFrame(48, 48, Gravity.LEFT | Gravity.BOTTOM, 12, 0, 0, 0f));
+        pickerViewBackButton.setContentDescription(getString("Back", R.string.Back));
+        ScaleStateListAnimator.apply(pickerViewBackButton);
+        pickerViewBackButton.setOnClickListener(v -> closePhoto(true, false));
+        pickerViewBackButton.setVisibility(View.GONE);
         pickerViewSendButton.setOnClickListener(v -> {
             if (parentChatActivity != null && parentChatActivity.editingMessageObject != null && parentChatActivity.editingMessageObject.needResendWhenEdit() && !ChatObject.canManageMonoForum(currentAccount, parentChatActivity.editingMessageObject.getDialogId())) {
                 final MessageSuggestionParams params = parentFragment != null && parentChatActivity.messageSuggestionParams != null ?
@@ -13379,6 +13423,18 @@ public class PhotoViewer implements NotificationCenter.NotificationCenterDelegat
         changeModeAnimation = null;
         pickerView.setVisibility(View.GONE);
         pickerViewSendButton.setVisibility(View.GONE);
+        if (pickerViewBackButton != null) {
+            pickerViewBackButton.setVisibility(View.GONE);
+        }
+        if (actionBar != null && actionBar.backButtonImageView != null) {
+            actionBar.backButtonImageView.setVisibility(View.VISIBLE);
+        }
+        if (actionBarContainer != null) {
+            actionBarContainer.updateLeftPadding(true);
+        }
+        if (actionBarContainer != null) {
+            actionBarContainer.updateLeftPadding(true);
+        }
         doneButtonFullWidth.setVisibility(View.GONE);
         muteButton.setVisibility(View.GONE);
         livePhotoButton.setVisibility(View.GONE);
@@ -14383,6 +14439,18 @@ public class PhotoViewer implements NotificationCenter.NotificationCenterDelegat
 
         pickerView.setVisibility(View.GONE);
         pickerViewSendButton.setVisibility(View.GONE);
+        if (pickerViewBackButton != null) {
+            pickerViewBackButton.setVisibility(View.GONE);
+        }
+        if (actionBar != null && actionBar.backButtonImageView != null) {
+            actionBar.backButtonImageView.setVisibility(View.VISIBLE);
+        }
+        if (actionBarContainer != null) {
+            actionBarContainer.updateLeftPadding(true);
+        }
+        if (actionBarContainer != null) {
+            actionBarContainer.updateLeftPadding(true);
+        }
         doneButtonFullWidth.setVisibility(View.GONE);
         pickerViewSendButton.setTranslationY(0);
         pickerView.setAlpha(1.0f);
@@ -14720,6 +14788,18 @@ public class PhotoViewer implements NotificationCenter.NotificationCenterDelegat
                     pickerViewSendButton.setVisibility(View.VISIBLE);
                     pickerViewSendButton.setTranslationY(0);
                     pickerViewSendButton.setAlpha(1.0f);
+                    if (pickerViewBackButton != null) {
+                        boolean ios = tw.nekomimi.nekogram.NekoConfig.iOSMessageInputField.Bool();
+                        pickerViewBackButton.setVisibility(ios ? View.VISIBLE : View.GONE);
+                        pickerViewBackButton.setTranslationY(0);
+                        pickerViewBackButton.setAlpha(1.0f);
+                        if (actionBar != null && actionBar.backButtonImageView != null) {
+                            actionBar.backButtonImageView.setVisibility(ios ? View.GONE : View.VISIBLE);
+                        }
+                        if (actionBarContainer != null) {
+                            actionBarContainer.updateLeftPadding(!ios);
+                        }
+                    }
                 }
                 if (navigationBar != null && (!fancyShadows || sendPhotoType == SELECT_TYPE_STICKER)) {
                     navigationBar.setVisibility(View.VISIBLE);
@@ -18355,6 +18435,11 @@ public class PhotoViewer implements NotificationCenter.NotificationCenterDelegat
                     pickerViewSendButton.setTranslationY(dp(32));
                     pickerViewSendButton.setAlpha(0f);
                     pickerViewSendButton.animate().alpha(1).translationY(0).setDuration(150).setInterpolator(CubicBezierInterpolator.DEFAULT).start();
+                    if (pickerViewBackButton != null) {
+                        pickerViewBackButton.setTranslationY(dp(32));
+                        pickerViewBackButton.setAlpha(0f);
+                        pickerViewBackButton.animate().alpha(1).translationY(0).setDuration(150).setInterpolator(CubicBezierInterpolator.DEFAULT).start();
+                    }
 
                     videoPreviewFrame.setTranslationY(dp(32));
                     videoPreviewFrame.animate().alpha(1).translationY(0).setDuration(150).setInterpolator(CubicBezierInterpolator.DEFAULT).start();
@@ -18596,6 +18681,15 @@ public class PhotoViewer implements NotificationCenter.NotificationCenterDelegat
 
         if (navigationBar != null) {
             navigationBar.setVisibility(View.VISIBLE);
+        }
+        if (pickerViewBackButton != null) {
+            pickerViewBackButton.setVisibility(View.GONE);
+        }
+        if (actionBar != null && actionBar.backButtonImageView != null) {
+            actionBar.backButtonImageView.setVisibility(View.VISIBLE);
+        }
+        if (actionBarContainer != null) {
+            actionBarContainer.updateLeftPadding(true);
         }
         if (windowView != null) {
             windowView.setClipChildren(false);
@@ -22033,6 +22127,7 @@ public class PhotoViewer implements NotificationCenter.NotificationCenterDelegat
                     ObjectAnimator.ofFloat(pickerView, View.TRANSLATION_Y, 0, pickerView.getHeight() + captionEdit.getEditTextHeight() + (isCurrentVideo ? dp(58) : 0)),
                     ObjectAnimator.ofFloat(pickerView, View.ALPHA, 0),
                     ObjectAnimator.ofFloat(pickerViewSendButton, View.TRANSLATION_Y, 0, dp(158)),
+                    pickerViewBackButton != null ? ObjectAnimator.ofFloat(pickerViewBackButton, View.TRANSLATION_Y, 0, dp(158)) : ObjectAnimator.ofFloat(navigationBar, View.ALPHA, fancyShadows ? 0 : 1, 1),
                     ObjectAnimator.ofFloat(navigationBar, View.ALPHA, fancyShadows ? 0 : 1, 1)
             );
         } else {
@@ -22068,7 +22163,8 @@ public class PhotoViewer implements NotificationCenter.NotificationCenterDelegat
                     qualityChooseViewAnimation.playTogether(
                             ObjectAnimator.ofFloat(pickerView, View.TRANSLATION_Y, 0),
                             ObjectAnimator.ofFloat(pickerView, View.ALPHA, 1),
-                            ObjectAnimator.ofFloat(pickerViewSendButton, View.TRANSLATION_Y, 0)
+                            ObjectAnimator.ofFloat(pickerViewSendButton, View.TRANSLATION_Y, 0),
+                            pickerViewBackButton != null ? ObjectAnimator.ofFloat(pickerViewBackButton, View.TRANSLATION_Y, 0) : ObjectAnimator.ofFloat(pickerView, View.ALPHA, 1)
                     );
                 }
                 qualityChooseViewAnimation.addListener(new AnimatorListenerAdapter() {
@@ -24155,8 +24251,12 @@ public class PhotoViewer implements NotificationCenter.NotificationCenterDelegat
         @Override
         public boolean dispatchKeyEvent(KeyEvent event) {
             int keyCode = event.getKeyCode();
-            if (!muteVideo && sendPhotoType != SELECT_TYPE_AVATAR && isCurrentVideo && videoPlayer != null && event.getRepeatCount() == 0 && event.getAction() == KeyEvent.ACTION_DOWN && (event.getKeyCode() == KeyEvent.KEYCODE_VOLUME_UP || event.getKeyCode() == KeyEvent.KEYCODE_VOLUME_DOWN)) {
+            if (xyz.nextalone.nagram.NaConfig.INSTANCE.getPlayVideoWithVolumeKeys().Bool() && !muteVideo && sendPhotoType != SELECT_TYPE_AVATAR && isCurrentVideo && videoPlayer != null && event.getRepeatCount() == 0 && event.getAction() == KeyEvent.ACTION_DOWN && (event.getKeyCode() == KeyEvent.KEYCODE_VOLUME_UP || event.getKeyCode() == KeyEvent.KEYCODE_VOLUME_DOWN)) {
                 videoPlayer.setVolume(1.0f);
+                if (!videoPlayer.isPlaying()) {
+                    manuallyPaused = false;
+                    toggleVideoPlayer();
+                }
             }
             return super.dispatchKeyEvent(event);
         }

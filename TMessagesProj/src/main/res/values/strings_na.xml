@@ -78,6 +78,10 @@
     <string name="DisableChannelMuteButton">Hide Bottom Bar in Channels</string>
     <string name="DisablePreviewVideoSoundShortcut">Disable Unmute Videos with Volume Buttons</string>
     <string name="DisablePreviewVideoSoundShortcutNotice">Prevent volume key from enabling preview video sound.</string>
+    <string name="PlayVideoWithVolumeKeys">Play Videos with Volume Buttons</string>
+    <string name="PlayVideoWithVolumeKeysNotice">Pressing volume keys in chats will start playback of the visible video.</string>
+    <string name="DraggableBottomBar">Draggable Tab Selector</string>
+    <string name="DraggableBottomBarNotice">Allow dragging the tab selection indicator across the bottom navigation bar.</string>
     <string name="PreviewSendPhoto">Send Photo</string>
     <string name="PreviewSendVideo">Send Video</string>
     <string name="PreviewSendFile">Send File</string>

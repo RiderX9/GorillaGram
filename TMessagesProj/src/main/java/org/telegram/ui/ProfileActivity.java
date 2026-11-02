@@ -559,6 +559,7 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
     private boolean usersEndReached;
 
     private long banFromGroup;
+    private long fromGroupId;
     private float backwardTransitionFromExtraHeight;
     private boolean openAnimationInProgress;
     private boolean transitionAnimationInProress;
@@ -737,6 +738,8 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
     private int channelInfoRow;
     private int usernameRow;
     private int idDcRow;
+    private int groupJoinedDateRow;
+    private int registrationDateRow;
     private int restrictionReasonRow;
     private int notificationsDividerRow;
     private int notificationsRow;
@@ -2201,6 +2204,10 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
         openSimilar = arguments.getBoolean("similar", false);
         isTopic = topicId != 0;
         banFromGroup = arguments.getLong("ban_chat_id", 0);
+        fromGroupId = arguments.getLong("from_group_id", 0);
+        if (fromGroupId == 0 && banFromGroup != 0) {
+            fromGroupId = banFromGroup;
+        }
         reportReactionMessageId = arguments.getInt("report_reaction_message_id", 0);
         reportReactionFromDialogId = arguments.getLong("report_reaction_from_dialog_id", 0);
         showAddToContacts = arguments.getBoolean("show_add_to_contacts", true);
@@ -5376,6 +5383,26 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
             searchAdapter.loadFaqWebPage();
         }
 
+        if (fromGroupId != 0 && currentChannelParticipant == null && userId != 0) {
+            TLRPC.Chat chat = getMessagesController().getChat(fromGroupId);
+            if (chat != null && ChatObject.isChannel(chat)) {
+                TLRPC.TL_channels_getParticipant req = new TLRPC.TL_channels_getParticipant();
+                req.channel = MessagesController.getInputChannel(chat);
+                req.participant = getMessagesController().getInputPeer(userId);
+                getConnectionsManager().sendRequest(req, (response, error) -> {
+                    if (response instanceof TLRPC.TL_channels_channelParticipant) {
+                        AndroidUtilities.runOnUIThread(() -> {
+                            currentChannelParticipant = ((TLRPC.TL_channels_channelParticipant) response).participant;
+                            updateRowsIds();
+                            if (listAdapter != null) {
+                                listAdapter.notifyDataSetChanged();
+                            }
+                        });
+                    }
+                });
+            }
+        }
+
         if (banFromGroup != 0) {
             TLRPC.Chat chat = getMessagesController().getChat(banFromGroup);
             if (currentChannelParticipant == null) {
@@ -5384,7 +5411,13 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                 req.participant = getMessagesController().getInputPeer(userId);
                 getConnectionsManager().sendRequest(req, (response, error) -> {
                     if (response != null) {
-                        AndroidUtilities.runOnUIThread(() -> currentChannelParticipant = ((TLRPC.TL_channels_channelParticipant) response).participant);
+                        AndroidUtilities.runOnUIThread(() -> {
+                            currentChannelParticipant = ((TLRPC.TL_channels_channelParticipant) response).participant;
+                            updateRowsIds();
+                            if (listAdapter != null) {
+                                listAdapter.notifyDataSetChanged();
+                            }
+                        });
                     }
                 });
             }
@@ -7791,7 +7824,7 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
             }
             o.show();
             return true;
-        } else if (position == idDcRow) {
+        } else if (position == idDcRow || position == registrationDateRow || position == groupJoinedDateRow) {
             showIdDcBottomSheet();
             return true;
         } else if (position == channelInfoRow || position == userInfoRow || position == locationRow || position == bioRow) {
@@ -10970,6 +11003,8 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
         birthdayRow = -1;
         setUsernameRow = -1;
         idDcRow = -1;
+        groupJoinedDateRow = -1;
+        registrationDateRow = -1;
         bioRow = -1;
         channelRow = -1;
         channelDividerRow = -1;
@@ -11151,6 +11186,9 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                 if (NaConfig.INSTANCE.getIdDcType().Int() != 0) {
                     idDcRow = rowCount++;
                 }
+                if (ProfileDateHelper.getRegistrationDate(userId) != null) {
+                    registrationDateRow = rowCount++;
+                }
                 bioRow = rowCount++;
 
                 settingsSectionRow = rowCount++;
@@ -11264,6 +11302,12 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                 }
                 if (NaConfig.INSTANCE.getIdDcType().Int() != 0) {
                     idDcRow = rowCount++;
+                }
+                if (fromGroupId != 0 && getGroupJoinDate() > 0) {
+                    groupJoinedDateRow = rowCount++;
+                }
+                if (user != null && !isBot && ProfileDateHelper.getRegistrationDate(userId) != null) {
+                    registrationDateRow = rowCount++;
                 }
                 if (userInfo != null) {
                     if (userInfo.birthday != null) {
@@ -14335,17 +14379,33 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                             value = "";
                             usernames = new ArrayList<>();
                         }
-                        detailCell.setTextAndValue(text, alsoUsernamesString(username, usernames, value), idDcRow != -1 || (infoEndRowEmpty == -1 && (isTopic || bizHoursRow != -1 || bizLocationRow != -1) && birthdayRow < 0));
+                        detailCell.setTextAndValue(text, alsoUsernamesString(username, usernames, value), idDcRow != -1 || registrationDateRow != -1 || groupJoinedDateRow != -1 || (infoEndRowEmpty == -1 && (isTopic || bizHoursRow != -1 || bizLocationRow != -1) && birthdayRow < 0));
                     } else if (position == idDcRow) {
                         long id = getId(true);
                         int dc = getDc();
                         boolean isUserSelf = userId == UserConfig.getInstance(currentAccount).getClientUserId();
-                        detailCell.setTextAndValue(id + "", dc != 0 ? String.format(Locale.US, "DC%d %s, %s", dc, getDCName(dc), getDCLocation(dc)) : "DC " + getString(R.string.NumberUnknown), isUserSelf);
+                        detailCell.setTextAndValue(id + "", dc != 0 ? String.format(Locale.US, "DC%d %s, %s", dc, getDCName(dc), getDCLocation(dc)) : "DC " + getString(R.string.NumberUnknown), groupJoinedDateRow != -1 || registrationDateRow != -1 || isUserSelf);
                         if (userId != 0 && !isBot) {
                             containsCalendar = true;
                         } else if (chatId != 0 && currentChat != null && currentChat.date != 0) {
                             containsCalendar = true;
                         }
+                    } else if (position == groupJoinedDateRow) {
+                        long joinDate = getGroupJoinDate();
+                        String joinDateStr;
+                        try {
+                            joinDateStr = new java.text.SimpleDateFormat("d MMM yyyy", LocaleController.getInstance().getCurrentLocale()).format(new java.util.Date(joinDate * 1000L));
+                        } catch (Exception e) {
+                            joinDateStr = LocaleController.formatDateChat(joinDate);
+                        }
+                        TLRPC.Chat chat = getMessagesController().getChat(fromGroupId);
+                        String chatTitle = chat != null && chat.title != null ? chat.title : "";
+                        String label = !TextUtils.isEmpty(chatTitle) ? LocaleController.formatString(R.string.JoinedGroupNamed, chatTitle) : LocaleController.getString(R.string.JoinedGroup);
+                        detailCell.setTextAndValue(joinDateStr, label, registrationDateRow != -1 || (infoEndRowEmpty == -1 && (isTopic || bizHoursRow != -1 || bizLocationRow != -1) && birthdayRow < 0));
+                    } else if (position == registrationDateRow) {
+                        String regDate = ProfileDateHelper.getRegistrationDate(userId);
+                        boolean isUserSelf = userId == UserConfig.getInstance(currentAccount).getClientUserId();
+                        detailCell.setTextAndValue(regDate != null ? regDate : "", LocaleController.getString(R.string.Registered), !isUserSelf && (infoEndRowEmpty == -1 && (isTopic || bizHoursRow != -1 || bizLocationRow != -1) && birthdayRow < 0));
                     } else if (position == restrictionReasonRow) {
                         ArrayList<TLRPC.RestrictionReason> reasons = new ArrayList<>();
                         if (userId != 0) {
@@ -15106,7 +15166,7 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                         position == clearLogsRow || position == switchBackendRow || position == setAvatarRow ||
                         position == addToGroupButtonRow || position == premiumRow || position == premiumGiftingRow ||
                         position == businessRow || position == liteModeRow || position == birthdayRow || position == channelRow ||
-                        position == starsRow || position == tonRow || position == linkedCommunityRow || position == idDcRow || position == nekoRow;
+                        position == starsRow || position == tonRow || position == linkedCommunityRow || position == idDcRow || position == registrationDateRow || position == groupJoinedDateRow || position == nekoRow;
             }
             if (holder.itemView instanceof UserCell) {
                 UserCell userCell = (UserCell) holder.itemView;
@@ -15137,7 +15197,7 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
             if (position == infoHeaderRow || position == membersHeaderRow || position == settingsSectionRow2 ||
                     position == numberSectionRow || position == helpHeaderRow || position == debugHeaderRow || position == botPermissionsHeader) {
                 return VIEW_TYPE_HEADER;
-            } else if (position == phoneRow || position == locationRow || position == numberRow || position == birthdayRow || position == restrictionReasonRow || position == idDcRow) {
+            } else if (position == phoneRow || position == locationRow || position == numberRow || position == birthdayRow || position == restrictionReasonRow || position == idDcRow || position == registrationDateRow || position == groupJoinedDateRow) {
                 return VIEW_TYPE_TEXT_DETAIL;
             } else if (position == usernameRow || position == setUsernameRow) {
                 return VIEW_TYPE_TEXT_DETAIL_MULTILINE;
@@ -17256,6 +17316,19 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
             textToCopy = user.phone;
         } else if (position == birthdayRow) {
             textToCopy = UserInfoActivity.birthdayString(userInfo.birthday);
+        } else if (position == registrationDateRow) {
+            textToCopy = ProfileDateHelper.getRegistrationDate(userId);
+            copyButton = LocaleController.getString(R.string.Copy);
+        } else if (position == groupJoinedDateRow) {
+            long joinDate = getGroupJoinDate();
+            if (joinDate > 0) {
+                try {
+                    textToCopy = new java.text.SimpleDateFormat("d MMM yyyy", LocaleController.getInstance().getCurrentLocale()).format(new java.util.Date(joinDate * 1000L));
+                } catch (Exception e) {
+                    textToCopy = LocaleController.formatDateChat(joinDate);
+                }
+            }
+            copyButton = LocaleController.getString(R.string.Copy);
         }
 
         final ItemOptions itemOptions = ItemOptions.makeOptions(this, cell);
@@ -17941,13 +18014,61 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
         return dc;
     }
 
+    private long getGroupJoinDate() {
+        if (currentChannelParticipant != null && currentChannelParticipant.date != 0) {
+            return currentChannelParticipant.date;
+        }
+        if (participantsMap != null) {
+            TLRPC.ChatParticipant p = participantsMap.get(userId);
+            if (p != null && p.date != 0) {
+                return p.date;
+            }
+        }
+        if (fromGroupId != 0) {
+            TLRPC.ChatFull full = getMessagesController().getChatFull(fromGroupId);
+            if (full != null && full.participants != null && full.participants.participants != null) {
+                for (int i = 0; i < full.participants.participants.size(); i++) {
+                    TLRPC.ChatParticipant p = full.participants.participants.get(i);
+                    if (p != null && p.user_id == userId && p.date != 0) {
+                        return p.date;
+                    }
+                }
+            }
+        }
+        return 0;
+    }
+
     private void showIdDcBottomSheet() {
         long id = getId(true);
         long idForLink = getId(false);
         int dc = getDc();
         BottomBuilder builder = new BottomBuilder(getParentActivity());
         if (userId != 0) {
-            builder.addTitle(id + "", ProfileDateHelper.getUserTime(id));
+            String regDate = ProfileDateHelper.getRegistrationDate(userId);
+            StringBuilder subtitle = new StringBuilder();
+            long joinDate = getGroupJoinDate();
+            if (fromGroupId != 0 && joinDate > 0) {
+                TLRPC.Chat chat = getMessagesController().getChat(fromGroupId);
+                String chatTitle = chat != null && chat.title != null ? chat.title : "";
+                String joinDateStr;
+                try {
+                    joinDateStr = new java.text.SimpleDateFormat("d MMM yyyy", LocaleController.getInstance().getCurrentLocale()).format(new java.util.Date(joinDate * 1000L));
+                } catch (Exception e) {
+                    joinDateStr = LocaleController.formatDateChat(joinDate);
+                }
+                subtitle.append("Joined ").append(chatTitle).append("\n").append(joinDateStr);
+            }
+            if (regDate != null) {
+                if (subtitle.length() > 0) {
+                    subtitle.append("\n\n");
+                }
+                subtitle.append(LocaleController.getString(R.string.Registered)).append("\n").append(regDate);
+            }
+            if (subtitle.length() > 0) {
+                builder.addTitle("id: " + id, subtitle.toString());
+            } else {
+                builder.addTitle("id: " + id, ProfileDateHelper.getUserTime(id));
+            }
         } else {
             builder.addTitle(id + "");
         }
@@ -17956,6 +18077,13 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
             return Unit.INSTANCE;
         });
         if (userId != 0) {
+            String regDate = ProfileDateHelper.getRegistrationDate(userId);
+            if (regDate != null) {
+                builder.addItem(getString(R.string.Copy) + " " + getString(R.string.Registered), R.drawable.msg_copy, __ -> {
+                    AlertUtil.copyAndAlert(regDate, this);
+                    return Unit.INSTANCE;
+                });
+            }
             builder.addItem(getString(R.string.CopyLink), R.drawable.profile_link, __ -> {
                 AlertUtil.copyLinkAndAlert("tg://user?id=" + idForLink, this);
                 return Unit.INSTANCE;

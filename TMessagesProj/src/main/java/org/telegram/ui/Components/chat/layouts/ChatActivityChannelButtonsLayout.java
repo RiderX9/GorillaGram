@@ -71,6 +71,31 @@ public class ChatActivityChannelButtonsLayout extends FrameLayout implements Fac
     private final BlurredBackgroundDrawableViewFactory blurredBackgroundDrawableViewFactory;
     private final BlurredBackgroundColorProvider colorProvider;
 
+    public interface OnMiddleBubbleScaleChanged {
+        void onScaleChanged(float scale);
+    }
+    private OnMiddleBubbleScaleChanged onMiddleBubbleScaleChanged;
+    public void setOnMiddleBubbleScaleChanged(OnMiddleBubbleScaleChanged listener) {
+        this.onMiddleBubbleScaleChanged = listener;
+    }
+
+    private final org.telegram.ui.Components.ButtonBounce middlePillBounce = new org.telegram.ui.Components.ButtonBounce(null) {
+        @Override
+        public void invalidate() {
+            super.invalidate();
+            if (container != null) {
+                float scale = getScale(0.08f);
+                container.setPivotX(container.getWidth() / 2f);
+                container.setPivotY(container.getHeight() / 2f);
+                container.setScaleX(scale);
+                container.setScaleY(scale);
+                if (onMiddleBubbleScaleChanged != null) {
+                    onMiddleBubbleScaleChanged.onScaleChanged(scale);
+                }
+            }
+        }
+    };
+
     public ChatActivityChannelButtonsLayout(@NonNull Context context,
                                             Theme.ResourcesProvider resourcesProvider,
                                             BlurredBackgroundColorProvider colorProvider,
@@ -80,13 +105,34 @@ public class ChatActivityChannelButtonsLayout extends FrameLayout implements Fac
         this.colorProvider = colorProvider;
         this.resourcesProvider = resourcesProvider;
 
-        container = new FrameLayout(context);
+        container = new FrameLayout(context) {
+            @Override
+            public boolean dispatchTouchEvent(android.view.MotionEvent ev) {
+                int action = ev.getActionMasked();
+                if (action == android.view.MotionEvent.ACTION_DOWN) {
+                    middlePillBounce.setPressed(true);
+                } else if (action == android.view.MotionEvent.ACTION_UP || action == android.view.MotionEvent.ACTION_CANCEL) {
+                    middlePillBounce.setPressed(false);
+                } else if (action == android.view.MotionEvent.ACTION_MOVE) {
+                    float x = ev.getX();
+                    float y = ev.getY();
+                    if (x < 0 || x > getWidth() || y < 0 || y > getHeight()) {
+                        middlePillBounce.setPressed(false);
+                    }
+                }
+                return super.dispatchTouchEvent(ev);
+            }
+        };
+        middlePillBounce.setView(container);
         container.setClipToOutline(true);
         container.setOutlineProvider(ViewOutlineProviderImpl.boundsWithPaddingRoundRect(0, dp(22)));
         addView(container, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, 44, Gravity.CENTER_VERTICAL));
     }
 
     public void updateColors() {
+        if (containerDrawable != null) {
+            containerDrawable.updateColors();
+        }
         for (ButtonHolder holder : buttonHolders) {
             if (holder != null) {
                 holder.button.updateColors();
@@ -135,7 +181,7 @@ public class ChatActivityChannelButtonsLayout extends FrameLayout implements Fac
                 button.setContentDescription(getString(R.string.BroadcastGroupInfo));
             }
 
-            ScaleStateListAnimator.apply(button, .13f, 2f);
+            org.telegram.ui.Components.ButtonBounce.apply(button);
             button.setVisibility(GONE);
             button.setOnClickListener(v -> {
                 if (onClickListeners[buttonId] != null) {
@@ -439,7 +485,15 @@ public class ChatActivityChannelButtonsLayout extends FrameLayout implements Fac
             );
             backgroundAccentPaint.setColor(accentColor);
             backgroundAccentPaint.setAlpha(accentAlpha);
-            canvas.drawRoundRect(tmpRect, dp(19), dp(19), backgroundAccentPaint);
+            float scale = middlePillBounce.getScale(0.08f);
+            if (scale != 1.0f) {
+                canvas.save();
+                canvas.scale(scale, scale, tmpRect.centerX(), tmpRect.centerY());
+                canvas.drawRoundRect(tmpRect, dp(19), dp(19), backgroundAccentPaint);
+                canvas.restore();
+            } else {
+                canvas.drawRoundRect(tmpRect, dp(19), dp(19), backgroundAccentPaint);
+            }
         }
 
         super.dispatchDraw(canvas);

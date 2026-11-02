@@ -2656,6 +2656,7 @@ public class ActionBarLayout extends FrameLayout implements INavigationLayout, F
         fragmentsStack.remove(fragment);
         containerViewBack.setVisibility(View.INVISIBLE);
         containerViewBack.setTranslationY(0);
+        containerViewBack.setAlpha(1.0f);
         bringChildToFront(containerView);
         if (sheetContainer != null) {
             bringChildToFront(sheetContainer);
@@ -2892,6 +2893,7 @@ public class ActionBarLayout extends FrameLayout implements INavigationLayout, F
                         transitionAnimationPreviewMode = false;
                     } else {
                         containerViewBack.setTranslationX(0);
+                        containerViewBack.setAlpha(1.0f);
                     }
                     closeLastFragmentInternalRemoveOld(currentFragment);
                     currentFragment.setRemovingFromStack(false);

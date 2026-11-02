@@ -53,10 +53,26 @@ public class ChatActivityTopPanelLayout extends AnimatedLinearLayout {
         invalidate();
     }
 
+    private final ButtonBounce bounce = new ButtonBounce(this);
+
     @Override
     public boolean dispatchTouchEvent(MotionEvent ev) {
+        final int action = ev.getActionMasked();
+        final int x = (int) ev.getX();
+        final int y = (int) ev.getY();
+        if (action == MotionEvent.ACTION_DOWN) {
+            if (backgroundDrawable != null && backgroundDrawable.getBounds().contains(x, y)) {
+                bounce.setPressed(true);
+            }
+        } else if (action == MotionEvent.ACTION_UP || action == MotionEvent.ACTION_CANCEL) {
+            bounce.setPressed(false);
+        } else if (action == MotionEvent.ACTION_MOVE) {
+            if (bounce.isPressed() && (backgroundDrawable == null || !backgroundDrawable.getBounds().contains(x, y))) {
+                bounce.setPressed(false);
+            }
+        }
         return super.dispatchTouchEvent(ev)
-                || ev.getAction() == MotionEvent.ACTION_DOWN && backgroundDrawable != null && backgroundDrawable.getBounds().contains((int) ev.getX(), (int) ev.getY());
+                || ev.getAction() == MotionEvent.ACTION_DOWN && backgroundDrawable != null && backgroundDrawable.getBounds().contains(x, y);
     }
 
     private final Path clipPath = new Path();
@@ -105,6 +121,14 @@ public class ChatActivityTopPanelLayout extends AnimatedLinearLayout {
     @Override
     protected void dispatchDraw(@NonNull Canvas canvas) {
         if (getMetadata().getTotalVisibility() == 0) return;
+
+        final float scale = bounce.getScale(0.05f);
+        if (scale != 1f) {
+            canvas.save();
+            final float cx = (clipRectF.left + clipRectF.right) / 2f;
+            final float cy = (clipRectF.top + clipRectF.bottom) / 2f;
+            canvas.scale(scale, scale, cx, cy);
+        }
 
         if (backgroundDrawable != null) {
             backgroundDrawable.draw(canvas);
@@ -169,5 +193,8 @@ public class ChatActivityTopPanelLayout extends AnimatedLinearLayout {
 
         super.dispatchDraw(canvas);
         canvas.restore();
+        if (scale != 1f) {
+            canvas.restore();
+        }
     }
 }

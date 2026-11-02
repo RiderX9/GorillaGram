@@ -17478,14 +17478,15 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
                 radialProgress.setColorKeys(Theme.key_chat_mediaLoaderPhoto, Theme.key_chat_mediaLoaderPhotoSelected, Theme.key_chat_mediaLoaderPhotoIcon, Theme.key_chat_mediaLoaderPhotoIconSelected);
                 videoRadialProgress.setColorKeys(Theme.key_chat_mediaLoaderPhoto, Theme.key_chat_mediaLoaderPhotoSelected, Theme.key_chat_mediaLoaderPhotoIcon, Theme.key_chat_mediaLoaderPhotoIconSelected);
                 if (buttonState >= 0 && buttonState < 4) {
+                    boolean isPlaying = MediaController.getInstance().isPlayingMessage(currentMessageObject) && !MediaController.getInstance().isMessagePaused();
                     if (buttonState == 0) {
                         return MediaActionDrawable.ICON_DOWNLOAD;
                     } else if (buttonState == 1) {
                         return MediaActionDrawable.ICON_CANCEL;
                     } else if (buttonState == 2) {
-                        return MediaActionDrawable.ICON_PLAY;
+                        return isPlaying ? MediaActionDrawable.ICON_NONE : MediaActionDrawable.ICON_PLAY;
                     } else {
-                        return autoPlayingMedia ? MediaActionDrawable.ICON_NONE : MediaActionDrawable.ICON_PLAY;
+                        return (autoPlayingMedia || isPlaying) ? MediaActionDrawable.ICON_NONE : MediaActionDrawable.ICON_PLAY;
                     }
                 } else if (buttonState == -1) {
                     if (documentAttachType == DOCUMENT_ATTACH_TYPE_DOCUMENT) {
@@ -17961,7 +17962,8 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
                         if ((documentAttachType == DOCUMENT_ATTACH_TYPE_VIDEO || documentAttachType == DOCUMENT_ATTACH_TYPE_GIF && autoDownload) && canStreamVideo && hasDocLayout && fullWidth) {
                             drawVideoImageButton = true;
                             getIconForCurrentState();
-                            radialProgress.setIcon(autoPlayingMedia ? MediaActionDrawable.ICON_NONE : MediaActionDrawable.ICON_PLAY, ifSame, animated);
+                            boolean isPlaying = MediaController.getInstance().isPlayingMessage(currentMessageObject) && !MediaController.getInstance().isMessagePaused();
+                            radialProgress.setIcon((autoPlayingMedia || isPlaying) ? MediaActionDrawable.ICON_NONE : MediaActionDrawable.ICON_PLAY, ifSame, animated);
                             videoRadialProgress.setIcon(MediaActionDrawable.ICON_DOWNLOAD, ifSame, animated);
                         } else {
                             drawVideoImageButton = false;
@@ -17988,7 +17990,8 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
                         if ((documentAttachType == DOCUMENT_ATTACH_TYPE_VIDEO || MessageObject.isGifDocument(documentAttach, currentMessageObject.hasValidGroupId()) && autoDownload) && canStreamVideo && hasDocLayout && fullWidth) {
                             drawVideoImageButton = true;
                             getIconForCurrentState();
-                            radialProgress.setIcon(autoPlayingMedia || documentAttachType == DOCUMENT_ATTACH_TYPE_GIF ? MediaActionDrawable.ICON_NONE : MediaActionDrawable.ICON_PLAY, ifSame, animated);
+                            boolean isPlaying = MediaController.getInstance().isPlayingMessage(currentMessageObject) && !MediaController.getInstance().isMessagePaused();
+                            radialProgress.setIcon((autoPlayingMedia || isPlaying) || documentAttachType == DOCUMENT_ATTACH_TYPE_GIF ? MediaActionDrawable.ICON_NONE : MediaActionDrawable.ICON_PLAY, ifSame, animated);
                             videoRadialProgress.setProgress(progress != null ? DownloadController.getProgress(progress) : 0, animated);
                             videoRadialProgress.setIcon(MediaActionDrawable.ICON_CANCEL_FILL, ifSame, animated);
                         } else {

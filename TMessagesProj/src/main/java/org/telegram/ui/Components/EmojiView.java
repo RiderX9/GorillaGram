@@ -2611,7 +2611,16 @@ public class EmojiView extends FrameLayout implements
                 updateStickerTabsPosition();
             });
 
-            stickersGridView.setOnScrollListener(new TypedScrollListener(Type.STICKERS));
+            stickersGridView.setOnScrollListener(new TypedScrollListener(Type.STICKERS) {
+                @Override
+                public void onScrolled(RecyclerView recyclerView, int dx, int dy) {
+                    super.onScrolled(recyclerView, dx, dy);
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && scrollableViewNoiseSuppressor != null) {
+                        scrollableViewNoiseSuppressor.onScrolled(dx, dy);
+                        invalidateBlurCaptures();
+                    }
+                }
+            });
             stickerAddPackButton = new FoundStickerPackButton(context, resourcesProvider);
             stickerAddPackButtonContainer = new FoundStickerPackButtonContainer(context, resourcesProvider);
             stickerAddPackButtonContainer.setVisibility(GONE);
@@ -2782,6 +2791,7 @@ public class EmojiView extends FrameLayout implements
                     saveNewPage();
                     showBackspaceButton(position == 0, true);
                     showStickerSettingsButton(position == 2 && (shouldDrawBackground || shouldDrawStickerSettings), true);
+                    invalidateBlurCaptures();
                     if (delegate.isSearchOpened()) {
                         if (position == 0) {
                             if (emojiSearchField != null) {
@@ -4562,6 +4572,7 @@ public class EmojiView extends FrameLayout implements
                 LiteMode.isEnabled(LiteMode.FLAG_LIQUID_GLASS) ? 0 : -dp(48),
                 LiteMode.isEnabled(LiteMode.FLAG_LIQUID_GLASS) ? 0 : -dp(48)
             );
+            blurredRectF.left = 0;
             blurredRectF.right = getMeasuredWidth();
             blurredRectF.bottom = Math.min(blurredRectF.bottom, getMeasuredHeight());
 

@@ -4712,9 +4712,7 @@ public class DialogCell extends BaseCell implements StoriesListPlaceProvider.Ava
                         s = drawReactionMention ? reactionsMentionsChangeProgress : (1f - reactionsMentionsChangeProgress);
                     }
 
-                    final Drawable drawable = drawCounterMuted ?
-                        Theme.dialogs_reactionsMentionDrawableMuted :
-                        Theme.dialogs_reactionsMentionDrawable;
+                    final Drawable drawable = Theme.dialogs_reactionsMentionDrawable;
 
                     drawable.setAlpha((int) ((1.0f - reorderIconProgress) * 255));
                     DrawableUtils.setBounds(drawable,

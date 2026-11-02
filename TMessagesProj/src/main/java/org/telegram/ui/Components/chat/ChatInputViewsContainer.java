@@ -118,6 +118,7 @@ public class ChatInputViewsContainer extends FrameLayout {
 
     private float leftBubbleScale = 1.0f;
     private float rightBubbleScale = 1.0f;
+    private float middleBubbleScale = 1.0f;
 
     public void setLeftBubbleScale(float scale) {
         if (leftBubbleScale != scale) {
@@ -129,6 +130,13 @@ public class ChatInputViewsContainer extends FrameLayout {
     public void setRightBubbleScale(float scale) {
         if (rightBubbleScale != scale) {
             rightBubbleScale = scale;
+            invalidate();
+        }
+    }
+
+    public void setMiddleBubbleScale(float scale) {
+        if (middleBubbleScale != scale) {
+            middleBubbleScale = scale;
             invalidate();
         }
     }
@@ -341,8 +349,16 @@ public class ChatInputViewsContainer extends FrameLayout {
         tmpRect.offset(0, blurTop + (int) bubbleInputTranlationY);
 
         blurredBackgroundDrawable.setBounds(tmpRect);
-        if (drawInputBackground)
-            blurredBackgroundDrawable.draw(canvas);
+        if (drawInputBackground) {
+            if (middleBubbleScale != 1.0f) {
+                canvas.save();
+                canvas.scale(middleBubbleScale, middleBubbleScale, tmpRect.centerX(), tmpRect.centerY());
+                blurredBackgroundDrawable.draw(canvas);
+                canvas.restore();
+            } else {
+                blurredBackgroundDrawable.draw(canvas);
+            }
+        }
 
         final int sideBubbleBottom = blurTop + (int) bubbleInputTranlationY + inputBubbleHeightRound;
         if (leftBubbleDrawable != null && leftBubbleVisible) {

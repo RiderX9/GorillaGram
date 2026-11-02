@@ -105,9 +105,8 @@
 
     <application
         android:name="org.telegram.messenger.ApplicationLoader"
-        android:allowBackup="true"
-        android:restoreAnyVersion="true"
-        android:backupAgent=".BackupAgent"
+        android:allowBackup="false"
+        android:restoreAnyVersion="false"
         android:hardwareAccelerated="true"
         android:icon="@mipmap/ic_launcher_gorilla"
         android:label="@string/AppName"
@@ -118,7 +117,7 @@
         android:roundIcon="@mipmap/ic_launcher_gorilla_round"
         android:supportsRtl="false"
         android:requestLegacyExternalStorage="true"
-        android:hasFragileUserData="true"
+        android:hasFragileUserData="false"
         android:preserveLegacyExternalStorage="true"
         android:allowAudioPlaybackCapture="true"
         tools:replace="android:supportsRtl"
@@ -133,6 +132,22 @@
             android:targetActivity="org.telegram.ui.LaunchActivity"
             android:icon="@mipmap/ic_launcher_gorilla"
             android:roundIcon="@mipmap/ic_launcher_gorilla_round"
+            android:exported="true">
+
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+                <category android:name="android.intent.category.MULTIWINDOW_LAUNCHER" />
+            </intent-filter>
+            <meta-data android:name="android.app.shortcuts" android:resource="@xml/shortcuts" />
+        </activity-alias>
+
+        <activity-alias
+            android:enabled="false"
+            android:name="org.telegram.messenger.RedIcon"
+            android:targetActivity="org.telegram.ui.LaunchActivity"
+            android:icon="@mipmap/icon_red_launcher"
+            android:roundIcon="@mipmap/icon_red_launcher_round"
             android:exported="true">
 
             <intent-filter>

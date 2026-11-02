@@ -75,7 +75,8 @@ public class NekoAppearanceSettingsActivity extends BaseNekoXSettingsActivity {
             "JetBrains Mono",
             "Playfair Display",
             "Inter",
-            "SF Pro (iOS)"
+            "SF Pro (iOS)",
+            "Linotte"
     }, null));
     private final AbstractConfigCell typefaceRow = cellGroup.appendCell(new ConfigCellTextCheck(NekoConfig.typeface));
     private final AbstractConfigCell hideDividersRow = cellGroup.appendCell(new ConfigCellTextCheck(NaConfig.INSTANCE.getHideDividers()));
@@ -102,6 +103,7 @@ public class NekoAppearanceSettingsActivity extends BaseNekoXSettingsActivity {
     }, null));
     private final AbstractConfigCell notificationIconRow = cellGroup.appendCell(new ConfigCellSelectBox(null, NaConfig.INSTANCE.getNotificationIcon(), new String[]{
             getString(R.string.MapPreviewProviderTelegram),
+            "Gorilla",
             getString(R.string.NagramX),
             getString(R.string.Nagram),
             getString(R.string.NekoX)
@@ -166,10 +168,6 @@ public class NekoAppearanceSettingsActivity extends BaseNekoXSettingsActivity {
     private final AbstractConfigCell pillStackRow = cellGroup.appendCell(
             new ConfigCellTextCheckIcon(null, "PillStack", getString(R.string.PillStackPills), R.drawable.ic_ab_search, false, () ->
                     presentFragment(new com.exteragram.messenger.pillstack.ui.PillStackPreferencesActivity()))
-    );
-    private final AbstractConfigCell chatBarElementsRow = cellGroup.appendCell(
-            new ConfigCellTextCheckIcon(null, "ChatBarElements", getString(R.string.ChatBarElements), R.drawable.msg_actions, false, () ->
-                    presentFragment(new ChatBarOrderActivity()))
     );
     private final AbstractConfigCell dividerFolder = cellGroup.appendCell(new ConfigCellDivider());
 

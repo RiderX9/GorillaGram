@@ -439,6 +439,14 @@ public class CaptionContainerView extends FrameLayout {
         return 0;
     }
 
+    public int getPadHLeft() {
+        return dp(7);
+    }
+
+    public int getPadHRight() {
+        return dp(7);
+    }
+
     private final Runnable textChangeRunnable = () -> onTextChange();
     protected void onTextChange() {}
 
@@ -1016,7 +1024,8 @@ public class CaptionContainerView extends FrameLayout {
         updateMentionsLayoutPosition();
 
         // final float pad = lerp(dp(12), 0, keyboardT * (1.0f - forceRound()));
-        final int padH = dp(7);
+        final int padHLeft = getPadHLeft();
+        final int padHRight = getPadHRight();
         final int padV = dp(8);
         if (isAtTop()) {
             if (!collapsed) {
@@ -1025,15 +1034,15 @@ public class CaptionContainerView extends FrameLayout {
             }
 
             bounds.set(
-                padH,
+                padHLeft,
                 padV,
-                getWidth() - padH,
+                getWidth() - padHRight,
                 padV + heightAnimated
             );
             clickBounds.set(
-                padH,
+                padHLeft,
                 padV,
-                getWidth() - padH,
+                getWidth() - padHRight,
                 padV + heightAnimated + dp(24)
             );
         } else {
@@ -1042,9 +1051,9 @@ public class CaptionContainerView extends FrameLayout {
                 editText.getEditText().setTranslationY(lastHeightTranslation = heightTranslation);
             }
             bounds.set(
-                padH,
+                padHLeft,
                 getHeight() - padV - heightAnimated,
-                getWidth() - padH,
+                getWidth() - padHRight,
                 getHeight() - padV
             );
             clickBounds.set(

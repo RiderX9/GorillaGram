@@ -690,6 +690,7 @@ public class ChatActivityEnterView extends FrameLayout implements
     private FrameLayout attachBubble;
     private ButtonBounce attachBubbleBounce;
     private ButtonBounce sendBubbleBounce;
+    private ButtonBounce messageBarBounce;
     private LinearLayout attachLayout;
     private ViewPropertyAnimator attachButtonAnimator;
     private ImageView attachButton;
@@ -2773,6 +2774,45 @@ public class ChatActivityEnterView extends FrameLayout implements
             @Override
             protected boolean drawChild(Canvas canvas, View child, long drawingTime) {
                 if (child != null && child == messageEditText) {
+                    if (isIOSInputStyle()) {
+                        final float r = dp(22);
+                        final float animTop = getHeight() - animatorInputFieldHeight.getFactor();
+                        final float pillTop = Math.min(0, animTop);
+                        final float pillBottom = getHeight() - dp(2);
+                        final boolean hasTopView = topView != null && topView.getVisibility() == VISIBLE;
+                        final float topR = hasTopView ? 0 : r;
+
+                        final float topL = dp(7);
+                        final float topR_X = getWidth() - dp(7);
+                        final float botL = 0;
+                        final float botR_X = getWidth();
+
+                        iosClipPath.reset();
+                        if (topR > 0) {
+                            iosClipPath.moveTo(topL, pillTop + topR);
+                            iosClipRect.set(topL, pillTop, topL + 2 * topR, pillTop + 2 * topR);
+                            iosClipPath.arcTo(iosClipRect, 180, 90, false);
+                            iosClipPath.lineTo(topR_X - topR, pillTop);
+                            iosClipRect.set(topR_X - 2 * topR, pillTop, topR_X, pillTop + 2 * topR);
+                            iosClipPath.arcTo(iosClipRect, 270, 90, false);
+                        } else {
+                            iosClipPath.moveTo(topL, pillTop);
+                            iosClipPath.lineTo(topR_X, pillTop);
+                        }
+                        iosClipPath.lineTo(botR_X, pillBottom - r);
+                        iosClipRect.set(botR_X - 2 * r, pillBottom - 2 * r, botR_X, pillBottom);
+                        iosClipPath.arcTo(iosClipRect, 0, 90, false);
+                        iosClipPath.lineTo(botL + r, pillBottom);
+                        iosClipRect.set(botL, pillBottom - 2 * r, botL + 2 * r, pillBottom);
+                        iosClipPath.arcTo(iosClipRect, 90, 90, false);
+                        iosClipPath.close();
+
+                        canvas.save();
+                        canvas.clipPath(iosClipPath);
+                        boolean res = super.drawChild(canvas, child, drawingTime);
+                        canvas.restore();
+                        return res;
+                    }
                     return drawMessageEditText(canvas, () -> super.drawChild(canvas, child, drawingTime));
                 }
                 if (shouldDrawRecordedAudioPanelInParent && child == recordedAudioPanel) {
@@ -2839,7 +2879,10 @@ public class ChatActivityEnterView extends FrameLayout implements
                 }
             }
         });
-        messageEditTextContainer.addView(emojiButton, LayoutHelper.createFrame(DEFAULT_HEIGHT, DEFAULT_HEIGHT, isIOSInputStyle() ? Gravity.CENTER_VERTICAL | Gravity.RIGHT : Gravity.BOTTOM | Gravity.LEFT, isIOSInputStyle() ? 0 : 2, 0, isIOSInputStyle() ? 6 : 0, 0));
+        messageEditTextContainer.addView(emojiButton, LayoutHelper.createFrame(DEFAULT_HEIGHT, DEFAULT_HEIGHT, isIOSInputStyle() ? Gravity.BOTTOM | Gravity.RIGHT : Gravity.BOTTOM | Gravity.LEFT, isIOSInputStyle() ? 0 : 2, 0, isIOSInputStyle() ? 6 : 0, 0));
+        if (isIOSInputStyle()) {
+            emojiButton.setTranslationZ(2f);
+        }
         setEmojiButtonImage(false, false);
 
         deleteRichDraftButton = new ImageView(context);
@@ -2878,7 +2921,7 @@ public class ChatActivityEnterView extends FrameLayout implements
             attachLayout.setOrientation(LinearLayout.HORIZONTAL);
             attachLayout.setEnabled(false);
             attachLayout.setClipChildren(false);
-            messageEditTextContainer.addView(attachLayout, LayoutHelper.createFrame(LayoutHelper.WRAP_CONTENT, DEFAULT_HEIGHT, isIOSInputStyle() ? Gravity.CENTER_VERTICAL | Gravity.RIGHT : Gravity.BOTTOM | Gravity.RIGHT, 0, 0, isIOSInputStyle() ? 44 : DEFAULT_HEIGHT, 0));
+            messageEditTextContainer.addView(attachLayout, LayoutHelper.createFrame(LayoutHelper.WRAP_CONTENT, DEFAULT_HEIGHT, Gravity.BOTTOM | Gravity.RIGHT, 0, 0, isIOSInputStyle() ? 44 : DEFAULT_HEIGHT, 0));
 
             if (chatMode != ChatActivity.MODE_WELCOME_MESSAGES) {
                 notifyButton = new ImageView(context);
@@ -2891,7 +2934,7 @@ public class ChatActivityEnterView extends FrameLayout implements
                 notifyButton.setBackgroundDrawable(Theme.createSelectorDrawable(getThemedColor(Theme.key_listSelector)));
                 notifyButton.setVisibility(canWriteToChannel && (delegate == null || !delegate.hasScheduledMessages()) ? VISIBLE : GONE);
                 if (isIOSInputStyle()) {
-                    attachLayout.addView(notifyButton, LayoutHelper.createLinear(DEFAULT_HEIGHT, DEFAULT_HEIGHT, 0, 0, 30, 0));
+                    attachLayout.addView(notifyButton, LayoutHelper.createLinear(DEFAULT_HEIGHT, DEFAULT_HEIGHT, Gravity.CENTER_VERTICAL, 0, 0, 2, 0));
                 } else {
                     attachLayout.addView(notifyButton, LayoutHelper.createLinear(DEFAULT_HEIGHT, DEFAULT_HEIGHT));
                 }
@@ -3000,6 +3043,16 @@ public class ChatActivityEnterView extends FrameLayout implements
                 if (adjustPanLayoutHelper != null && adjustPanLayoutHelper.animationInProgress() || attachLayoutPaddingAlpha == 0f) {
                     return;
                 }
+                if (isIOSInputStyle() && editingMessageObject != null) {
+                    if (parentFragment != null) {
+                        if (editingMessageObject.canEditMedia()) {
+                            parentFragment.openAttachMenuForEditing();
+                        } else {
+                            parentFragment.fallbackFieldPanel();
+                        }
+                    }
+                    return;
+                }
                 delegate.didPressAttachButton();
             });
             attachButton.setContentDescription(getString(R.string.AccDescrAttachButton));
@@ -3087,17 +3140,11 @@ public class ChatActivityEnterView extends FrameLayout implements
         richButton.setImageResource(R.drawable.iv_fullscreen);
         richButton.setScaleType(ImageView.ScaleType.CENTER);
         richButton.setColorFilter(new PorterDuffColorFilter(getThemedColor(isIOSInputStyle() ? Theme.key_actionBarActionModeDefaultIcon : Theme.key_glass_defaultIcon), PorterDuff.Mode.MULTIPLY));
+        richButton.setBackground(Theme.createSelectorDrawable(getThemedColor(Theme.key_listSelector), Theme.RIPPLE_MASK_CIRCLE_20DP, dp(16)));
         if (isIOSInputStyle()) {
-            if (parentFragment != null && parentFragment.glassBackgroundDrawableFactory != null) {
-                BlurredBackgroundDrawable glass = parentFragment.glassBackgroundDrawableFactory.create(richButton, parentFragment.blurredBackgroundColorProvider);
-                glass.setRadius(dp(18));
-                richButton.setBackground(glass);
-            } else {
-                richButton.setBackground(Theme.createSelectorDrawable(getThemedColor(Theme.key_listSelector), Theme.RIPPLE_MASK_CIRCLE_20DP, dp(16)));
-            }
-            textFieldContainer.addView(richButton, LayoutHelper.createFrame(33, 33, Gravity.TOP | Gravity.RIGHT, 0, 10, 4.66f, 0));
+            richButton.setTranslationZ(1f);
+            messageEditTextContainer.addView(richButton, LayoutHelper.createFrame(DEFAULT_HEIGHT, DEFAULT_HEIGHT, Gravity.TOP | Gravity.RIGHT, 0, 0, 6, 0));
         } else {
-            richButton.setBackground(Theme.createSelectorDrawable(getThemedColor(Theme.key_listSelector), Theme.RIPPLE_MASK_CIRCLE_20DP, dp(16)));
             textFieldContainer.addView(richButton, LayoutHelper.createFrame(DEFAULT_HEIGHT, DEFAULT_HEIGHT, Gravity.TOP | Gravity.RIGHT, 0, 1, 0, 0));
         }
         richButton.setContentDescription(getString(R.string.ArticleEditor));
@@ -4148,7 +4195,19 @@ public class ChatActivityEnterView extends FrameLayout implements
                 }
             }
         };
-        botButton.setImageDrawable(botButtonDrawable = new ReplaceableIconDrawable(getContext()));
+        botButton.setImageDrawable(botButtonDrawable = new ReplaceableIconDrawable(getContext()) {
+            @Override
+            public void draw(@NonNull Canvas canvas) {
+                if (isIOSInputStyle()) {
+                    canvas.save();
+                    canvas.scale(1.05f, 1.05f, getBounds().centerX(), getBounds().centerY());
+                    super.draw(canvas);
+                    canvas.restore();
+                } else {
+                    super.draw(canvas);
+                }
+            }
+        });
         botButtonDrawable.setColorFilter(new PorterDuffColorFilter(getThemedColor(Theme.key_glass_defaultIcon), PorterDuff.Mode.MULTIPLY));
         botButtonDrawable.setIcon(R.drawable.input_bot2, false);
         botButton.setScaleType(ImageView.ScaleType.CENTER);
@@ -4156,7 +4215,7 @@ public class ChatActivityEnterView extends FrameLayout implements
         botButton.setVisibility(GONE);
         AndroidUtilities.updateViewVisibilityAnimated(botButton, false, 0.1f, false);
         if (isIOSInputStyle()) {
-            attachLayout.addView(botButton, LayoutHelper.createLinear(DEFAULT_HEIGHT, DEFAULT_HEIGHT, Gravity.CENTER_VERTICAL, 0, 0, 4, 0));
+            attachLayout.addView(botButton, LayoutHelper.createLinear(DEFAULT_HEIGHT, DEFAULT_HEIGHT, Gravity.CENTER_VERTICAL, 0, 0, 2, 0));
             updateScheduledButtonMarginsIOS();
         } else {
             attachLayout.addView(botButton, 0, LayoutHelper.createLinear(DEFAULT_HEIGHT, DEFAULT_HEIGHT));
@@ -4199,11 +4258,6 @@ public class ChatActivityEnterView extends FrameLayout implements
 
         doneButton = new SendButton(getContext(), R.drawable.input_done, resourcesProvider, true) {
             @Override
-            public boolean isOpen() {
-                return true;
-            }
-
-            @Override
             public boolean isInactive() {
                 return !doneButtonEnabled;
             }
@@ -4212,7 +4266,11 @@ public class ChatActivityEnterView extends FrameLayout implements
         if (bounceable) {
             ScaleStateListAnimator.apply(doneButton);
         }
-        textFieldContainer.addView(doneButton, LayoutHelper.createFrame(DEFAULT_HEIGHT, DEFAULT_HEIGHT, Gravity.BOTTOM | Gravity.RIGHT));
+        if (isIOSInputStyle() && sendButtonContainer != null) {
+            sendButtonContainer.addView(doneButton, LayoutHelper.createFrame(44, 44, Gravity.BOTTOM | Gravity.RIGHT));
+        } else {
+            textFieldContainer.addView(doneButton, LayoutHelper.createFrame(DEFAULT_HEIGHT, DEFAULT_HEIGHT, Gravity.BOTTOM | Gravity.RIGHT));
+        }
     }
 
     @SuppressLint("AppCompatCustomView")
@@ -4745,7 +4803,7 @@ public class ChatActivityEnterView extends FrameLayout implements
             }
         });
         senderSelectView.setVisibility(GONE);
-        messageEditTextContainer.addView(senderSelectView, LayoutHelper.createFrame(36, 36, Gravity.BOTTOM | Gravity.LEFT, isIOSInputStyle() ? 44.66f : 4.66f, 4, 4.66f, 4));
+        messageEditTextContainer.addView(senderSelectView, LayoutHelper.createFrame(isIOSInputStyle() ? 32 : 36, isIOSInputStyle() ? 32 : 36, Gravity.BOTTOM | Gravity.LEFT, isIOSInputStyle() ? 12f : 4.66f, isIOSInputStyle() ? 0 : 4, 4.66f, isIOSInputStyle() ? 6f : 4));
     }
 
     private void createBotCommandsMenuButton() {
@@ -4782,7 +4840,7 @@ public class ChatActivityEnterView extends FrameLayout implements
                 botCommandsMenuContainer.dismiss();
             }
         });
-        messageEditTextContainer.addView(botCommandsMenuButton, LayoutHelper.createFrame(LayoutHelper.WRAP_CONTENT, 32, isIOSInputStyle() ? (Gravity.CENTER_VERTICAL | Gravity.LEFT) : (Gravity.BOTTOM | Gravity.LEFT), isIOSInputStyle() ? 12 : 8, isIOSInputStyle() ? 0 : 6, 8, isIOSInputStyle() ? 0 : 6));
+        messageEditTextContainer.addView(botCommandsMenuButton, LayoutHelper.createFrame(LayoutHelper.WRAP_CONTENT, 32, Gravity.BOTTOM | Gravity.LEFT, isIOSInputStyle() ? 12 : 8, 0, 8, 6));
         AndroidUtilities.updateViewVisibilityAnimated(botCommandsMenuButton, false, 1f, false);
         botCommandsMenuButton.setExpanded(true, false);
     }
@@ -4985,7 +5043,7 @@ public class ChatActivityEnterView extends FrameLayout implements
 
     @Override
     protected boolean drawChild(Canvas canvas, View child, long drawingTime) {
-        boolean clip = child == topView || child == textFieldContainer;
+        boolean clip = child == topView || (!isIOSInputStyle() && child == textFieldContainer);
         if (clip) {
             final float separatorY = getMeasuredHeight() - animatorInputFieldHeight.getFactor();
             canvas.save();
@@ -4993,7 +5051,16 @@ public class ChatActivityEnterView extends FrameLayout implements
                 canvas.clipRect(0, separatorY, getMeasuredWidth(), getMeasuredHeight());
             }
             if (child == topView) {
-                canvas.clipRect(0, 0, getMeasuredWidth(), separatorY);
+                if (isIOSInputStyle()) {
+                    final float visibility = animatorTopViewVisibility.getFloatValue();
+                    final float pillTop = separatorY - topView.getMeasuredHeight() * visibility;
+                    topViewClipPath.reset();
+                    topViewClipPath.addRect(0, pillTop, getMeasuredWidth() - dp(48), separatorY, Path.Direction.CW);
+                    topViewClipPath.addRect(getMeasuredWidth() - dp(48), pillTop, getMeasuredWidth(), getMeasuredHeight(), Path.Direction.CW);
+                    canvas.clipPath(topViewClipPath);
+                } else {
+                    canvas.clipRect(0, 0, getMeasuredWidth(), separatorY);
+                }
             }
         }
         boolean result = super.drawChild(canvas, child, drawingTime);
@@ -6165,8 +6232,8 @@ public class ChatActivityEnterView extends FrameLayout implements
             super.onMeasure(widthMeasureSpec, heightMeasureSpec);
             if (isInitLineCount) {
                 lineCount = getLineCount();
-                showAiButton(lineCount > (isIOSInputStyle() ? 3 : 2) && !TextUtils.isEmpty(getText().toString().trim()));
-                showRichButton(lineCount > (isIOSInputStyle() ? 3 : 2) && !TextUtils.isEmpty(getText().toString().trim()));
+                showAiButton(lineCount > 2 && !TextUtils.isEmpty(getText().toString().trim()));
+                showRichButton(lineCount > 2 && !TextUtils.isEmpty(getText().toString().trim()));
             }
             isInitLineCount = false;
         }
@@ -6381,8 +6448,17 @@ public class ChatActivityEnterView extends FrameLayout implements
             boolean clickMaybe;
             @Override
             public boolean onTouchEvent(MotionEvent event) {
+                if (messageBarBounce != null) {
+                    final int action = event.getAction();
+                    if (action == MotionEvent.ACTION_DOWN) {
+                        messageBarBounce.setPressed(true);
+                    } else if (action == MotionEvent.ACTION_UP || action == MotionEvent.ACTION_CANCEL) {
+                        messageBarBounce.setPressed(false);
+                    }
+                }
                 if (botCommandsMenuIsShowing()) {
                     if (event.getAction() == MotionEvent.ACTION_DOWN) {
+                        setCursorVisible(true);
                         touchX = event.getX();
                         touchY = event.getY();
                         clickMaybe = true;
@@ -6405,6 +6481,7 @@ public class ChatActivityEnterView extends FrameLayout implements
                     return clickMaybe;
                 } else {
                     if (event.getAction() == MotionEvent.ACTION_DOWN) {
+                        setCursorVisible(true);
                         if (delegate != null) {
                             fixHandlesColor();
                             delegate.onKeyboardRequested();
@@ -6443,8 +6520,8 @@ public class ChatActivityEnterView extends FrameLayout implements
             protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
                 super.onMeasure(widthMeasureSpec, heightMeasureSpec);
                 if (lineCount != messageEditText.getLineCount()) {
-                    showAiButton(messageEditText.getLineCount() > (isIOSInputStyle() ? 3 : 2) && messageEditText.getText() != null && !TextUtils.isEmpty(messageEditText.getText().toString().trim()));
-                    showRichButton(messageEditText.getLineCount() > (isIOSInputStyle() ? 3 : 2) && messageEditText.getText() != null && !TextUtils.isEmpty(messageEditText.getText().toString().trim()));
+                    showAiButton(messageEditText.getLineCount() > 2 && messageEditText.getText() != null && !TextUtils.isEmpty(messageEditText.getText().toString().trim()));
+                    showRichButton(messageEditText.getLineCount() > 2 && messageEditText.getText() != null && !TextUtils.isEmpty(messageEditText.getText().toString().trim()));
                 }
             }
         };
@@ -6478,7 +6555,7 @@ if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.VANILLA_ICE_CREAM) {
         messageEditText.setIncludeFontPadding(false);
         messageEditText.setImeOptions(flags);
         messageEditText.setInputType(commonInputType = (messageEditText.getInputType() | EditorInfo.TYPE_TEXT_FLAG_CAP_SENTENCES | EditorInfo.TYPE_TEXT_FLAG_MULTI_LINE));
-        updateFieldHint(false);
+        messageEditText.setTypeface(AndroidUtilities.regular());
         messageEditText.setSingleLine(false);
         messageEditText.setMaxLines(6);
         messageEditText.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 18);
@@ -6492,6 +6569,24 @@ if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.VANILLA_ICE_CREAM) {
         messageEditText.setHintTextColor(getThemedColor(Theme.key_chat_messagePanelHint));
         messageEditText.setCursorColor(getThemedColor(Theme.key_chat_messagePanelCursor));
         messageEditText.setHandlesColor(getThemedColor(Theme.key_chat_TextSelectionCursor));
+        messageEditText.setCursorVisible(false);
+        if (isIOSInputStyle()) {
+            messageBarBounce = new ButtonBounce(messageEditTextContainer) {
+                @Override
+                public void invalidate() {
+                    super.invalidate();
+                    float scale = getScale(0.03f);
+                    messageEditTextContainer.setPivotX(messageEditTextContainer.getWidth() / 2f);
+                    messageEditTextContainer.setPivotY(messageEditTextContainer.getHeight() / 2f);
+                    messageEditTextContainer.setScaleX(scale);
+                    messageEditTextContainer.setScaleY(scale);
+                    if (parentFragment != null && parentFragment.chatInputViewsContainer != null) {
+                        parentFragment.chatInputViewsContainer.setMiddleBubbleScale(scale);
+                    }
+                }
+            };
+        }
+        updateFieldHint(false);
         messageEditTextContainer.addView(messageEditText, 1, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, Gravity.BOTTOM, 52, 0, isChat ? 50 : 2, 1.5f));
 
         richDraftPreview = new RichMessageLayout.PreviewView(getContext(), currentAccount, resourcesProvider);
@@ -6606,13 +6701,13 @@ if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.VANILLA_ICE_CREAM) {
                     setEmojiButtonImage(false, true);
                 }
                 if (lineCount != messageEditText.getLineCount()) {
-                    heightShouldBeChanged = (messageEditText.getLineCount() >= 4) != (lineCount >= 4);
+                    heightShouldBeChanged = (messageEditText.getLineCount() >= (isIOSInputStyle() ? 3 : 4)) != (lineCount >= (isIOSInputStyle() ? 3 : 4));
                     if (!isInitLineCount && messageEditText.getMeasuredWidth() > 0) {
                         onLineCountChanged(lineCount, messageEditText.getLineCount());
                     }
                     lineCount = messageEditText.getLineCount();
-                    showAiButton(lineCount > (isIOSInputStyle() ? 3 : 2) && charSequence != null && !TextUtils.isEmpty(charSequence.toString().trim()));
-                    showRichButton(lineCount > (isIOSInputStyle() ? 3 : 2) && charSequence != null && !TextUtils.isEmpty(charSequence.toString().trim()));
+                    showAiButton(lineCount > 2 && charSequence != null && !TextUtils.isEmpty(charSequence.toString().trim()));
+                    showRichButton(lineCount > 2 && charSequence != null && !TextUtils.isEmpty(charSequence.toString().trim()));
                 } else {
                     heightShouldBeChanged = false;
                 }
@@ -6725,9 +6820,9 @@ if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.VANILLA_ICE_CREAM) {
                     }
                 }
 
-                showAiButton(lineCount > (isIOSInputStyle() ? 3 : 2) && editable != null && !TextUtils.isEmpty(editable.toString().trim()));
+                showAiButton(lineCount > 2 && editable != null && !TextUtils.isEmpty(editable.toString().trim()));
                 checkIsEphemeralMessage(true);
-                showRichButton(lineCount > (isIOSInputStyle() ? 3 : 2) && editable != null && !TextUtils.isEmpty(editable.toString().trim()));
+                showRichButton(lineCount > 2 && editable != null && !TextUtils.isEmpty(editable.toString().trim()));
             }
         });
         messageEditText.addTextChangedListener(new EditTextSuggestionsFix());
@@ -6820,18 +6915,86 @@ if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.VANILLA_ICE_CREAM) {
         if (shownRichButton == show) return;
         shownRichButton = show;
         richButton.setVisibility(View.VISIBLE);
-        richButton.animate()
-            .alpha(show ? 1.0f : 0.0f)
-            .scaleX(show ? 1.0f : 0.6f)
-            .scaleY(show ? 1.0f : 0.6f)
-            .setInterpolator(CubicBezierInterpolator.EASE_OUT_QUINT)
-            .setDuration(420)
-            .withEndAction(() -> {
-                if (!show) {
-                    richButton.setVisibility(View.GONE);
+        if (isIOSInputStyle()) {
+            if (show) {
+                richButton.setAlpha(0.0f);
+                richButton.setScaleX(0.5f);
+                richButton.setScaleY(0.5f);
+                richButton.setTranslationY(0);
+                richButton.animate()
+                    .alpha(1.0f)
+                    .scaleX(1.0f)
+                    .scaleY(1.0f)
+                    .setInterpolator(CubicBezierInterpolator.EASE_OUT_QUINT)
+                    .setDuration(250)
+                    .start();
+            } else {
+                richButton.animate()
+                    .alpha(0.0f)
+                    .scaleX(0.5f)
+                    .scaleY(0.5f)
+                    .setInterpolator(CubicBezierInterpolator.EASE_OUT_QUINT)
+                    .setDuration(180)
+                    .withEndAction(() -> {
+                        if (!shownRichButton) {
+                            richButton.setVisibility(View.GONE);
+                            richButton.setTranslationY(0);
+                        }
+                    })
+                    .start();
+            }
+        } else {
+            richButton.animate()
+                .alpha(show ? 1.0f : 0.0f)
+                .scaleX(show ? 1.0f : 0.5f)
+                .scaleY(show ? 1.0f : 0.5f)
+                .setInterpolator(CubicBezierInterpolator.EASE_OUT_QUINT)
+                .setDuration(show ? 300 : 180)
+                .withEndAction(() -> {
+                    if (!show) {
+                        richButton.setVisibility(View.GONE);
+                    }
+                })
+                .start();
+        }
+    }
+
+    private ValueAnimator richButtonHeightAnimator;
+
+    public void animateRichButtonHeightChange(float heightDiff) {
+        if (isIOSInputStyle() && richButton != null && richButton.getVisibility() == View.VISIBLE) {
+            if (heightDiff != 0) {
+                float currentY = richButton.getTranslationY();
+                float targetY = currentY - heightDiff;
+                richButton.setTranslationY(targetY);
+                if (richButtonHeightAnimator != null) {
+                    richButtonHeightAnimator.cancel();
                 }
-            })
-            .start();
+                ValueAnimator ra = ValueAnimator.ofFloat(targetY, 0);
+                ra.addUpdateListener(anim -> {
+                    if (richButton != null) {
+                        richButton.setTranslationY((float) anim.getAnimatedValue());
+                    }
+                });
+                ra.addListener(new AnimatorListenerAdapter() {
+                    @Override
+                    public void onAnimationEnd(Animator animation) {
+                        richButtonHeightAnimator = null;
+                        if (richButton != null) {
+                            richButton.setTranslationY(0);
+                        }
+                    }
+                });
+                ra.setDuration(ChatListItemAnimator.DEFAULT_DURATION);
+                ra.setInterpolator(ChatListItemAnimator.DEFAULT_INTERPOLATOR);
+                ra.start();
+                richButtonHeightAnimator = ra;
+            } else {
+                if (richButtonHeightAnimator == null && richButton.getTranslationY() != 0) {
+                    richButton.setTranslationY(0);
+                }
+            }
+        }
     }
 
     public void addTextChangedListener(TextWatcher textWatcher) {
@@ -7454,11 +7617,20 @@ if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.VANILLA_ICE_CREAM) {
             userInfo = userFull;
         }
 
-        audioVideoButtonContainer.setAlpha(audioVideoButtonContainerForbidden ? 0.5f : 1.0f);
+        audioVideoButtonContainer.setAlpha(isIOSInputStyle() ? 1.0f : (audioVideoButtonContainerForbidden ? 0.5f : 1.0f));
         audioVideoButtonContainer.invalidate();
         updateAudioVideoSendButtonColor();
         audioVideoSendButton.invalidate();
+        if (attachButton != null && isIOSInputStyle()) {
+            boolean isMuted = !sendPlainEnabled || (chat != null && !ChatObject.canSendAnyMedia(chat));
+            boolean inPreview = parentFragment != null && parentFragment.isInPreviewMode();
+            int attachColor = (inPreview && isMuted) || (chat != null && !ChatObject.canSendAnyMedia(chat))
+                    ? getThemedColor(Theme.key_glass_defaultIcon)
+                    : getThemedColor(Theme.key_actionBarActionModeDefaultIcon);
+            attachButton.setColorFilter(new PorterDuffColorFilter(attachColor, PorterDuff.Mode.MULTIPLY));
+        }
         updateFieldHint(false);
+        updateBotButton(false);
         boolean currentModeVideo = isInVideoMode;
         if (!sendRoundEnabled && currentModeVideo) {
             currentModeVideo = false;
@@ -7698,13 +7870,19 @@ if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.VANILLA_ICE_CREAM) {
         }
         if (!sendPlainEnabled && !isEditingMessage()) {
             SpannableStringBuilder spannableStringBuilder = new SpannableStringBuilder(" d " + getString("PlainTextRestrictedHint", R.string.PlainTextRestrictedHint));
-            spannableStringBuilder.setSpan(new ColoredImageSpan(R.drawable.msg_mini_lock3), 1, 2, 0);
+            spannableStringBuilder.setSpan(new ColoredImageSpan(R.drawable.msg_mini_lock3, ColoredImageSpan.ALIGN_CENTER), 1, 2, 0);
             messageEditText.setHintText(spannableStringBuilder, animated);
             messageEditText.setText(null);
             messageEditText.setEnabled(false);
             messageEditText.setInputType(EditorInfo.IME_ACTION_NONE);
+            if (isIOSInputStyle()) {
+                messageEditText.setTranslationY(AndroidUtilities.dp(2f));
+            }
             return;
         } else {
+            if (isIOSInputStyle() && messageEditText.getTranslationY() != 0) {
+                messageEditText.setTranslationY(0);
+            }
             messageEditText.setEnabled(true);
             if (messageEditText.getInputType() != commonInputType) {
                 messageEditText.setInputType(commonInputType);
@@ -11088,6 +11266,40 @@ if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.VANILLA_ICE_CREAM) {
         }
     }
 
+    private boolean touchingCloseView;
+    private final int[] closeLocationTmp = new int[2];
+
+    @Override
+    public boolean dispatchTouchEvent(MotionEvent ev) {
+        if (isIOSInputStyle() && topView instanceof ChatActivityEnterTopView) {
+            ChatActivityEnterTopView top = (ChatActivityEnterTopView) topView;
+            View close = top.getCloseView();
+            if (close != null && close.getVisibility() == VISIBLE && top.getVisibility() == VISIBLE) {
+                close.getLocationOnScreen(closeLocationTmp);
+                float rx = ev.getRawX();
+                float ry = ev.getRawY();
+                boolean hit = rx >= closeLocationTmp[0] && rx <= closeLocationTmp[0] + close.getWidth() && ry >= closeLocationTmp[1] && ry <= closeLocationTmp[1] + close.getHeight();
+                int action = ev.getActionMasked();
+                if (action == MotionEvent.ACTION_DOWN) {
+                    touchingCloseView = hit;
+                }
+                if (touchingCloseView) {
+                    MotionEvent transformed = MotionEvent.obtain(ev);
+                    transformed.setLocation(rx - closeLocationTmp[0], ry - closeLocationTmp[1]);
+                    boolean handled = close.dispatchTouchEvent(transformed);
+                    transformed.recycle();
+                    if (action == MotionEvent.ACTION_UP || action == MotionEvent.ACTION_CANCEL) {
+                        touchingCloseView = false;
+                    }
+                    if (handled) {
+                        return true;
+                    }
+                }
+            }
+        }
+        return super.dispatchTouchEvent(ev);
+    }
+
     @Override
     public boolean onInterceptTouchEvent(MotionEvent ev) {
         if (recordingAudioVideo) {
@@ -11286,11 +11498,11 @@ if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.VANILLA_ICE_CREAM) {
 
             if (editingMessageObject.needResendWhenEdit() && paidMessagesPrice > 0) {
                 doneButton.setStarsPrice(paidMessagesPrice, 1, true);
-                doneButton.setLayoutParams(LayoutHelper.createFrame(DEFAULT_HEIGHT, DEFAULT_HEIGHT, Gravity.BOTTOM | Gravity.RIGHT));
+                doneButton.setLayoutParams(LayoutHelper.createFrame(isIOSInputStyle() ? 44 : DEFAULT_HEIGHT, isIOSInputStyle() ? 44 : DEFAULT_HEIGHT, Gravity.BOTTOM | Gravity.RIGHT));
                 doneButton.requestLayout();
             } else {
                 doneButton.setStarsPrice(0, 1, true);
-                doneButton.setLayoutParams(LayoutHelper.createFrame(DEFAULT_HEIGHT, DEFAULT_HEIGHT, Gravity.BOTTOM | Gravity.RIGHT));
+                doneButton.setLayoutParams(LayoutHelper.createFrame(isIOSInputStyle() ? 44 : DEFAULT_HEIGHT, isIOSInputStyle() ? 44 : DEFAULT_HEIGHT, Gravity.BOTTOM | Gravity.RIGHT));
                 doneButton.requestLayout();
             }
 
@@ -11359,6 +11571,14 @@ if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.VANILLA_ICE_CREAM) {
             doneButton.setScaleY(0.1f);
             doneButton.setAlpha(0.0f);
             doneButton.animate().alpha(1f).scaleX(1).scaleY(1).setDuration(150).setInterpolator(CubicBezierInterpolator.DEFAULT).start();
+
+            if (isIOSInputStyle()) {
+                if (attachButton != null) {
+                    attachButton.setImageResource(editingMessageObject != null && editingMessageObject.canEditMedia() ? R.drawable.msg_input_attach2_solar : R.drawable.filled_reply_settings);
+                }
+                checkUi_IslandTotalHeight();
+                checkUi_TopViewVisibility();
+            }
 
             CharSequence editingText;
             if (caption) {
@@ -11434,7 +11654,17 @@ if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.VANILLA_ICE_CREAM) {
                 attachButton.setScaleX(0.5f);
                 attachButton.setScaleY(0.5f);
             }
-            sendButtonContainer.setVisibility(GONE);
+            if (isIOSInputStyle()) {
+                sendButtonContainer.setVisibility(VISIBLE);
+                if (audioVideoButtonContainer != null) {
+                    audioVideoButtonContainer.setVisibility(GONE);
+                }
+                if (sendButton != null) {
+                    sendButton.setVisibility(GONE);
+                }
+            } else {
+                sendButtonContainer.setVisibility(GONE);
+            }
             if (scheduledButton != null) {
                 scheduledButton.setVisibility(GONE);
             }
@@ -11445,6 +11675,11 @@ if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.VANILLA_ICE_CREAM) {
             }
             if (doneButton != null) {
                 doneButton.setVisibility(View.GONE);
+            }
+            if (isIOSInputStyle()) {
+                if (audioVideoButtonContainer != null) {
+                    audioVideoButtonContainer.setVisibility(VISIBLE);
+                }
             }
             currentLimit = -1;
             delegate.onMessageEditEnd(false);
@@ -11516,6 +11751,13 @@ if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.VANILLA_ICE_CREAM) {
                 scheduledButton.setAlpha(1.0f);
                 scheduledButton.setVisibility(VISIBLE);
             }
+            if (isIOSInputStyle()) {
+                if (attachButton != null) {
+                    attachButton.setImageResource(R.drawable.msg_input_attach2_solar);
+                }
+                checkUi_IslandTotalHeight();
+                checkUi_TopViewVisibility();
+            }
             if (parentFragment != null) {
                 parentFragment.editingMessageObject = null;
                 parentFragment.foundWebPage = null;
@@ -11542,6 +11784,7 @@ if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.VANILLA_ICE_CREAM) {
         updateSendAsButton(true);
         updateButtons();
         updateRichDraftPreview();
+        updateSideBubbles();
     }
 
     @Nullable
@@ -11775,11 +12018,11 @@ if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.VANILLA_ICE_CREAM) {
             return;
         }
         boolean isMenuState = audioVideoSendButton.getCurrentState() == ChatActivityEnterViewAnimatedIconView.State.MENU;
-        int color = audioVideoButtonContainerForbidden || isMenuState
-                ? getThemedColor(Theme.key_glass_defaultIcon)
-                : isIOSInputStyle()
+        int color = isIOSInputStyle()
                 ? getThemedColor(Theme.key_actionBarActionModeDefaultIcon)
-                : Color.WHITE;
+                : (audioVideoButtonContainerForbidden || isMenuState
+                ? getThemedColor(Theme.key_glass_defaultIcon)
+                : Color.WHITE);
         audioVideoSendButton.setColorFilter(new PorterDuffColorFilter(color, PorterDuff.Mode.SRC_IN));
         audioVideoSendButton.invalidateStateCache();
         audioVideoSendButton.invalidate();
@@ -12141,8 +12384,8 @@ if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.VANILLA_ICE_CREAM) {
     }
 
     private void updateButtons() {
-        showAiButton(messageEditText != null && messageEditText.getLineCount() > (isIOSInputStyle() ? 3 : 2) && messageEditText.getText() != null && !TextUtils.isEmpty(messageEditText.getText().toString().trim()));
-        showRichButton(messageEditText != null && messageEditText.getLineCount() > (isIOSInputStyle() ? 3 : 2) && messageEditText.getText() != null && !TextUtils.isEmpty(messageEditText.getText().toString().trim()));
+        showAiButton(messageEditText != null && messageEditText.getLineCount() > 2 && messageEditText.getText() != null && !TextUtils.isEmpty(messageEditText.getText().toString().trim()));
+        showRichButton(messageEditText != null && messageEditText.getLineCount() > 2 && messageEditText.getText() != null && !TextUtils.isEmpty(messageEditText.getText().toString().trim()));
     }
 
     private void sendRichDraftAsSimpleMessage() {
@@ -12564,9 +12807,15 @@ if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.VANILLA_ICE_CREAM) {
                     senderSelectView.setAlpha(startAlpha + (endAlpha - startAlpha) * val);
                     senderSelectView.setTranslationX(tx);
                 }
-                emojiButton.setTranslationX(tx);
-                messageTextTranslationX = tx;
-                updateMessageTextParams();
+                if (!isIOSInputStyle()) {
+                    emojiButton.setTranslationX(tx);
+                    messageTextTranslationX = tx;
+                    updateMessageTextParams();
+                } else {
+                    emojiButton.setTranslationX(0);
+                    messageTextTranslationX = 0;
+                    updateMessageTextParams();
+                }
             });
             anim.addListener(new AnimatorListenerAdapter() {
                 @Override
@@ -12581,9 +12830,16 @@ if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.VANILLA_ICE_CREAM) {
                         senderSelectView.setTranslationX(startX);
                         tx = senderSelectView.getTranslationX();
                     }
-                    emojiButton.setTranslationX(tx);
-                    messageTextTranslationX = tx;
-                    updateMessageTextParams();
+                    if (!isIOSInputStyle()) {
+                        emojiButton.setTranslationX(tx);
+                        messageTextTranslationX = tx;
+                        updateMessageTextParams();
+                    } else {
+                        emojiButton.setTranslationX(0);
+                        messageTextTranslationX = 0;
+                        updateMessageTextParams();
+                        requestLayout();
+                    }
 
                     if (botCommandsMenuButton != null && botCommandsMenuButton.getTag() == null) {
                         animationParamsX.clear();
@@ -12599,6 +12855,9 @@ if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.VANILLA_ICE_CREAM) {
                         emojiButton.setTranslationX(0);
                         messageTextTranslationX = 0;
                         updateMessageTextParams();
+                        if (isIOSInputStyle()) {
+                            requestLayout();
+                        }
                     }
                 }
 
@@ -12614,9 +12873,15 @@ if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.VANILLA_ICE_CREAM) {
                         senderSelectView.setTranslationX(endX);
                         tx = senderSelectView.getTranslationX();
                     }
-                    emojiButton.setTranslationX(tx);
-                    messageTextTranslationX = tx;
-                    updateMessageTextParams();
+                    if (!isIOSInputStyle()) {
+                        emojiButton.setTranslationX(tx);
+                        messageTextTranslationX = tx;
+                        updateMessageTextParams();
+                    } else {
+                        emojiButton.setTranslationX(0);
+                        messageTextTranslationX = 0;
+                        updateMessageTextParams();
+                    }
                     requestLayout();
                 }
             });
@@ -12632,10 +12897,17 @@ if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.VANILLA_ICE_CREAM) {
                 senderSelectView.setVisibility(isVisible ? VISIBLE : GONE);
                 senderSelectView.setTranslationX(endX);
             }
-            float translationX = isVisible ? endX : 0;
-            emojiButton.setTranslationX(translationX);
-            messageTextTranslationX = translationX;
-            updateMessageTextParams();
+            if (!isIOSInputStyle()) {
+                float translationX = isVisible ? endX : 0;
+                emojiButton.setTranslationX(translationX);
+                messageTextTranslationX = translationX;
+                updateMessageTextParams();
+            } else {
+                emojiButton.setTranslationX(0);
+                messageTextTranslationX = 0;
+                updateMessageTextParams();
+                requestLayout();
+            }
             if (senderSelectView != null) {
                 senderSelectView.setAlpha(endAlpha);
                 senderSelectView.setTag(null);
@@ -12653,6 +12925,12 @@ if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.VANILLA_ICE_CREAM) {
 
      private void updateBotButton(boolean animated) {
          if (!isChat) {
+             return;
+         }
+         if (!sendPlainEnabled) {
+             if (botButton != null && botButton.getVisibility() != GONE) {
+                 botButton.setVisibility(GONE);
+             }
              return;
          }
          if (messageEditText != null && !TextUtils.isEmpty(messageEditText.getText())) {
@@ -14674,6 +14952,7 @@ if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.VANILLA_ICE_CREAM) {
             delegate.onKeyboardRequested();
         }
         if (messageEditText != null) {
+            messageEditText.setCursorVisible(true);
             messageEditText.requestFocus();
         }
         AndroidUtilities.showKeyboard(messageEditText);
@@ -14712,14 +14991,20 @@ if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.VANILLA_ICE_CREAM) {
         if (delegate != null) {
             delegate.onKeyboardRequested();
         }
-        if (messageEditText != null && !AndroidUtilities.showKeyboard(messageEditText)) {
-            messageEditText.clearFocus();
-            messageEditText.requestFocus();
+        if (messageEditText != null) {
+            messageEditText.setCursorVisible(true);
+            if (!AndroidUtilities.showKeyboard(messageEditText)) {
+                messageEditText.clearFocus();
+                messageEditText.requestFocus();
+            }
         }
     }
 
     public void closeKeyboard() {
         AndroidUtilities.hideKeyboard(messageEditText);
+        if (messageEditText != null) {
+            messageEditText.setCursorVisible(false);
+        }
     }
 
     public boolean isPopupShowing() {
@@ -14768,6 +15053,9 @@ if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.VANILLA_ICE_CREAM) {
             lastSizeChangeValue1 = height;
             lastSizeChangeValue2 = isWidthGreater;
             keyboardVisible = height > 0;
+            if (messageEditText != null) {
+                messageEditText.setCursorVisible(keyboardVisible);
+            }
             checkBotMenu();
             return;
         }
@@ -14865,6 +15153,9 @@ if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.VANILLA_ICE_CREAM) {
 
         boolean oldValue = keyboardVisible;
         keyboardVisible = height > 0;
+        if (messageEditText != null) {
+            messageEditText.setCursorVisible(keyboardVisible);
+        }
         checkBotMenu();
         if (keyboardVisible && isPopupShowing() && stickersExpansionAnim == null) {
             showPopup(0, currentPopupContentType);
@@ -16090,14 +16381,27 @@ if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.VANILLA_ICE_CREAM) {
     protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
         int wasHeight = textFieldContainer.getMeasuredHeight();
         if (isIOSInputStyle()) {
+            boolean hasSender = senderSelectView != null && senderSelectView.getVisibility() == View.VISIBLE;
+            if (hasSender) {
+                int width = senderSelectView.getLayoutParams().width, height = senderSelectView.getLayoutParams().height;
+                senderSelectView.measure(MeasureSpec.makeMeasureSpec(width, MeasureSpec.EXACTLY), MeasureSpec.makeMeasureSpec(height, MeasureSpec.EXACTLY));
+            }
             if (botCommandsMenuButton != null && botCommandsMenuButton.getTag() != null) {
                 botCommandsMenuButton.measure(widthMeasureSpec, heightMeasureSpec);
                 int botWidth = botCommandsMenuButton.getMeasuredWidth();
+                int baseLeft = hasSender ? dp(52) : dp(12);
                 if (messageEditText != null) {
-                    ((MarginLayoutParams) messageEditText.getLayoutParams()).leftMargin = dp(12) + botWidth + dp(8);
+                    ((MarginLayoutParams) messageEditText.getLayoutParams()).leftMargin = baseLeft + botWidth + dp(8);
                 }
                 if (richDraftPreview != null) {
-                    ((MarginLayoutParams) richDraftPreview.getLayoutParams()).leftMargin = dp(12) + botWidth + dp(8);
+                    ((MarginLayoutParams) richDraftPreview.getLayoutParams()).leftMargin = baseLeft + botWidth + dp(8);
+                }
+            } else if (hasSender) {
+                if (messageEditText != null) {
+                    ((MarginLayoutParams) messageEditText.getLayoutParams()).leftMargin = dp(52);
+                }
+                if (richDraftPreview != null) {
+                    ((MarginLayoutParams) richDraftPreview.getLayoutParams()).leftMargin = dp(52);
                 }
             } else {
                 if (messageEditText != null) {
@@ -16163,17 +16467,24 @@ if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.VANILLA_ICE_CREAM) {
         checkUi_IslandTotalHeight();
         checkUi_TopViewVisibility();
 
-        if (!isIOSInputStyle() && wasHeight > 0 && textFieldContainer.getMeasuredHeight() != wasHeight) {
-            for (int i = 0; i < 2; ++i) {
-                final View view = i == 0 ? aiButton : richButton;
-                view.setTranslationY(view.getTranslationY() + textFieldContainer.getMeasuredHeight() - wasHeight);
-                view.animate()
+        if (wasHeight > 0 && textFieldContainer.getMeasuredHeight() != wasHeight) {
+            int diff = textFieldContainer.getMeasuredHeight() - wasHeight;
+            if (!isIOSInputStyle() && aiButton != null) {
+                aiButton.setTranslationY(aiButton.getTranslationY() + diff);
+                aiButton.animate()
+                    .translationY(0)
+                    .setInterpolator(CubicBezierInterpolator.EASE_OUT_QUINT).setDuration(420)
+                    .start();
+            }
+            if (richButton != null && !isIOSInputStyle()) {
+                richButton.setTranslationY(richButton.getTranslationY() + diff);
+                richButton.animate()
                     .translationY(0)
                     .setInterpolator(CubicBezierInterpolator.EASE_OUT_QUINT).setDuration(420)
                     .start();
             }
             if (aiHint != null) {
-                aiHint.setTranslationY(aiHint.getTranslationY() + textFieldContainer.getMeasuredHeight() - wasHeight);
+                aiHint.setTranslationY(aiHint.getTranslationY() + diff);
                 aiHint.animate()
                     .translationY(0)
                     .setInterpolator(CubicBezierInterpolator.EASE_OUT_QUINT).setDuration(420)
@@ -16185,6 +16496,9 @@ if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.VANILLA_ICE_CREAM) {
     @Override
     protected void onLayout(boolean changed, int left, int top, int right, int bottom) {
         super.onLayout(changed, left, top, right, bottom);
+        if (changed && isIOSInputStyle()) {
+            post(this::updateSideBubbles);
+        }
         if (botCommandLastPosition != -1 && botCommandsMenuContainer != null) {
             LinearLayoutManager layoutManager = (LinearLayoutManager) botCommandsMenuContainer.listView.getLayoutManager();
             if (layoutManager != null) {
@@ -16397,7 +16711,7 @@ if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.VANILLA_ICE_CREAM) {
     }
 
     private boolean computeIOSInputStyle() {
-        if (!NekoConfig.iOSMessageInputField.Bool() || isStories || parentFragment == null || parentFragment.isInPreviewMode()) {
+        if (!NekoConfig.iOSMessageInputField.Bool() || isStories || parentFragment == null) {
             return false;
         }
         final TLRPC.Chat chat = parentFragment.getCurrentChat();
@@ -16441,6 +16755,9 @@ if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.VANILLA_ICE_CREAM) {
 
     private int getIOSSendBubbleWidth() {
         int sendWidth = dp(44);
+        if (editingMessageObject != null || (doneButton != null && doneButton.getVisibility() == VISIBLE)) {
+            return sendWidth;
+        }
         final boolean textSendActive = sendButton != null && sendButton.starsPrice <= 0
             && messageEditText != null && messageEditText.getText() != null
             && !TextUtils.isEmpty(messageEditText.getText().toString().trim());
@@ -16512,6 +16829,7 @@ if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.VANILLA_ICE_CREAM) {
             attachBubble.post(this::updateSideBubbles);
             return;
         }
+        container.drawInputBackground = true;
         container.setInputBubbleOffsets(
             Math.round(dp(59) * progress),
             Math.round((dp(59) + Math.max(0, sendWidth - dp(44))) * progress));
@@ -16540,6 +16858,9 @@ if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.VANILLA_ICE_CREAM) {
             emojiButton.setLayoutParams(emojiLp);
         }
         emojiButton.setTranslationX(-extra);
+        if (richButton != null) {
+            richButton.setTranslationX(-extra);
+        }
         final int editRight = dp(44) + extra + (botButtonDrawable != null ? dp(20) : 0);
         if (layoutParams.rightMargin != editRight) {
             layoutParams.rightMargin = editRight;
@@ -16547,7 +16868,7 @@ if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.VANILLA_ICE_CREAM) {
         }
     }
 
-    private void updateSideBubbles() {
+    public void updateSideBubbles() {
         if (parentFragment == null || parentFragment.chatInputViewsContainer == null) {
             return;
         }
@@ -16641,10 +16962,7 @@ if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.VANILLA_ICE_CREAM) {
     }
 
     public boolean isAttachButtonOnLeft() {
-        java.util.List<Integer> active = tw.nekomimi.nekogram.helpers.ChatBarOrderHelper.getActiveItems();
-        int attachIndex = active.indexOf(tw.nekomimi.nekogram.helpers.ChatBarOrderHelper.ID_ATTACH);
-        int emojiIndex = active.indexOf(tw.nekomimi.nekogram.helpers.ChatBarOrderHelper.ID_EMOJI);
-        return attachIndex != -1 && (emojiIndex == -1 || attachIndex < emojiIndex);
+        return isIOSInputStyle();
     }
 
     public void applyChatBarLayout() {
@@ -16667,92 +16985,90 @@ if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.VANILLA_ICE_CREAM) {
                     messageEditText.setLayoutParams(lpEdit);
                 }
             }
+            if (emojiButton != null) {
+                FrameLayout.LayoutParams lpEmoji = (FrameLayout.LayoutParams) emojiButton.getLayoutParams();
+                if (lpEmoji != null) {
+                    lpEmoji.gravity = Gravity.BOTTOM | Gravity.RIGHT;
+                    lpEmoji.leftMargin = 0;
+                    lpEmoji.rightMargin = dp(6);
+                    emojiButton.setLayoutParams(lpEmoji);
+                }
+            }
+            if (richButton != null) {
+                if (richButton.getParent() != messageEditTextContainer) {
+                    if (richButton.getParent() != null) {
+                        ((ViewGroup) richButton.getParent()).removeView(richButton);
+                    }
+                    messageEditTextContainer.addView(richButton, LayoutHelper.createFrame(DEFAULT_HEIGHT, DEFAULT_HEIGHT, Gravity.TOP | Gravity.RIGHT, 0, 0, 6, 0));
+                } else {
+                    FrameLayout.LayoutParams lpRich = (FrameLayout.LayoutParams) richButton.getLayoutParams();
+                    if (lpRich != null) {
+                        lpRich.gravity = Gravity.TOP | Gravity.RIGHT;
+                        lpRich.leftMargin = 0;
+                        lpRich.topMargin = 0;
+                        lpRich.rightMargin = dp(6);
+                        lpRich.bottomMargin = 0;
+                        richButton.setLayoutParams(lpRich);
+                    }
+                }
+            }
             return;
         }
-        java.util.List<Integer> active = tw.nekomimi.nekogram.helpers.ChatBarOrderHelper.getActiveItems();
-        java.util.List<Integer> hidden = tw.nekomimi.nekogram.helpers.ChatBarOrderHelper.getHiddenItems();
-
-        if (hidden.contains(tw.nekomimi.nekogram.helpers.ChatBarOrderHelper.ID_AI) && aiButton != null) {
-            aiButton.setVisibility(View.GONE);
+        FrameLayout.LayoutParams lpContainer = (FrameLayout.LayoutParams) messageEditTextContainer.getLayoutParams();
+        if (lpContainer != null) {
+            lpContainer.leftMargin = 0;
+            lpContainer.rightMargin = dp(DEFAULT_HEIGHT);
+            messageEditTextContainer.setLayoutParams(lpContainer);
         }
-        if (hidden.contains(tw.nekomimi.nekogram.helpers.ChatBarOrderHelper.ID_EMOJI) && emojiButton != null) {
-            emojiButton.setVisibility(View.GONE);
-        }
-        if (hidden.contains(tw.nekomimi.nekogram.helpers.ChatBarOrderHelper.ID_ATTACH) && attachButton != null) {
-            attachButton.setVisibility(View.GONE);
-            if (attachLayout != null) attachLayout.setVisibility(View.GONE);
-        }
-        if (hidden.contains(tw.nekomimi.nekogram.helpers.ChatBarOrderHelper.ID_MIC_SEND) && sendButtonContainer != null) {
-            sendButtonContainer.setVisibility(View.GONE);
-        }
-
-        boolean micOnLeft = !active.isEmpty() && active.get(0) == tw.nekomimi.nekogram.helpers.ChatBarOrderHelper.ID_MIC_SEND;
-
-        if (sendButtonContainer != null && !hidden.contains(tw.nekomimi.nekogram.helpers.ChatBarOrderHelper.ID_MIC_SEND)) {
+        if (sendButtonContainer != null) {
             FrameLayout.LayoutParams lpSend = (FrameLayout.LayoutParams) sendButtonContainer.getLayoutParams();
             if (lpSend != null) {
-                lpSend.gravity = Gravity.BOTTOM | (micOnLeft ? Gravity.LEFT : Gravity.RIGHT);
+                lpSend.gravity = Gravity.BOTTOM | Gravity.RIGHT;
                 sendButtonContainer.setLayoutParams(lpSend);
             }
-            FrameLayout.LayoutParams lpContainer = (FrameLayout.LayoutParams) messageEditTextContainer.getLayoutParams();
-            if (lpContainer != null) {
-                if (micOnLeft) {
-                    lpContainer.leftMargin = dp(DEFAULT_HEIGHT);
-                    lpContainer.rightMargin = 0;
-                } else {
-                    lpContainer.leftMargin = 0;
-                    lpContainer.rightMargin = dp(DEFAULT_HEIGHT);
-                }
-                messageEditTextContainer.setLayoutParams(lpContainer);
-            }
         }
-
-        int attachIndex = active.indexOf(tw.nekomimi.nekogram.helpers.ChatBarOrderHelper.ID_ATTACH);
-        int emojiIndex = active.indexOf(tw.nekomimi.nekogram.helpers.ChatBarOrderHelper.ID_EMOJI);
-
-        boolean attachOnLeft = attachIndex != -1 && (emojiIndex == -1 || attachIndex < emojiIndex);
-        boolean emojiOnLeft = !attachOnLeft;
-
-        if (attachButton != null && !hidden.contains(tw.nekomimi.nekogram.helpers.ChatBarOrderHelper.ID_ATTACH)) {
+        if (attachButton != null) {
             FrameLayout.LayoutParams lpAttach = (FrameLayout.LayoutParams) attachButton.getLayoutParams();
             if (lpAttach != null) {
-                lpAttach.gravity = Gravity.BOTTOM | (attachOnLeft ? Gravity.LEFT : Gravity.RIGHT);
-                if (attachOnLeft) {
-                    lpAttach.leftMargin = dp(2);
-                    lpAttach.rightMargin = 0;
-                } else {
-                    lpAttach.leftMargin = 0;
-                    lpAttach.rightMargin = 0;
-                }
+                lpAttach.gravity = Gravity.BOTTOM | Gravity.RIGHT;
+                lpAttach.leftMargin = 0;
+                lpAttach.rightMargin = 0;
                 attachButton.setLayoutParams(lpAttach);
             }
         }
-
-        if (emojiButton != null && !hidden.contains(tw.nekomimi.nekogram.helpers.ChatBarOrderHelper.ID_EMOJI)) {
+        if (emojiButton != null) {
             FrameLayout.LayoutParams lpEmoji = (FrameLayout.LayoutParams) emojiButton.getLayoutParams();
             if (lpEmoji != null) {
-                lpEmoji.gravity = Gravity.BOTTOM | (emojiOnLeft ? Gravity.LEFT : Gravity.RIGHT);
-                if (emojiOnLeft) {
-                    lpEmoji.leftMargin = dp(2);
-                    lpEmoji.rightMargin = 0;
-                } else {
-                    lpEmoji.leftMargin = 0;
-                    lpEmoji.rightMargin = dp(2);
-                }
+                lpEmoji.gravity = Gravity.BOTTOM | Gravity.LEFT;
+                lpEmoji.leftMargin = dp(2);
+                lpEmoji.rightMargin = 0;
                 emojiButton.setLayoutParams(lpEmoji);
             }
         }
-
+        if (richButton != null) {
+            if (richButton.getParent() != textFieldContainer) {
+                if (richButton.getParent() != null) {
+                    ((ViewGroup) richButton.getParent()).removeView(richButton);
+                }
+                textFieldContainer.addView(richButton, LayoutHelper.createFrame(DEFAULT_HEIGHT, DEFAULT_HEIGHT, Gravity.TOP | Gravity.RIGHT, 0, 1, 0, 0));
+            } else {
+                FrameLayout.LayoutParams lpRich = (FrameLayout.LayoutParams) richButton.getLayoutParams();
+                if (lpRich != null) {
+                    lpRich.gravity = Gravity.TOP | Gravity.RIGHT;
+                    lpRich.leftMargin = 0;
+                    lpRich.topMargin = dp(1);
+                    lpRich.rightMargin = 0;
+                    lpRich.bottomMargin = 0;
+                    richButton.setLayoutParams(lpRich);
+                }
+            }
+        }
         if (messageEditText != null) {
             FrameLayout.LayoutParams lpEdit = (FrameLayout.LayoutParams) messageEditText.getLayoutParams();
             if (lpEdit != null) {
-                boolean hasLeftButton = (attachOnLeft && !hidden.contains(tw.nekomimi.nekogram.helpers.ChatBarOrderHelper.ID_ATTACH))
-                        || (emojiOnLeft && !hidden.contains(tw.nekomimi.nekogram.helpers.ChatBarOrderHelper.ID_EMOJI));
-                boolean hasRightButton = (!attachOnLeft && !hidden.contains(tw.nekomimi.nekogram.helpers.ChatBarOrderHelper.ID_ATTACH))
-                        || (!emojiOnLeft && !hidden.contains(tw.nekomimi.nekogram.helpers.ChatBarOrderHelper.ID_EMOJI));
-
-                lpEdit.leftMargin = dp(hasLeftButton ? 52 : 12);
-                lpEdit.rightMargin = dp(hasRightButton ? 50 : 12);
+                boolean hasBotMenu = botCommandsMenuButton != null && botCommandsMenuButton.getVisibility() == View.VISIBLE;
+                lpEdit.leftMargin = hasBotMenu ? (dp(12) + botCommandsMenuButton.getMeasuredWidth() + dp(8)) : dp(52);
+                lpEdit.rightMargin = dp(isAttachButtonOnLeft() ? 12 : 50);
                 messageEditText.setLayoutParams(lpEdit);
             }
         }
@@ -17463,6 +17779,11 @@ if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.VANILLA_ICE_CREAM) {
         }
     }
 
+    private final Path iosClipPath = new Path();
+    private final Path topViewClipPath = new Path();
+    private final RectF iosClipRect = new RectF();
+    private final float[] iosClipRadii = new float[8];
+
     private final Paint gradientPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final LinearGradient clipGradient = new LinearGradient(0, 0, 0, 16, new int[] { 0xffffffff, 0x00ffffff }, new float[] { 0, 1 }, Shader.TileMode.CLAMP);
     private final Matrix clipMatrix = new Matrix();
@@ -17474,6 +17795,9 @@ if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.VANILLA_ICE_CREAM) {
     }
 
     public boolean drawMessageEditText(Canvas canvas, Utilities.Callback0Return<Boolean> drawChild) {
+        if (isIOSInputStyle()) {
+            return drawChild.run();
+        }
         float topAlpha = topGradientAlpha.set(messageEditText.canScrollVertically(-1));
         float bottomAlpha = bottomGradientAlpha.set(messageEditText.canScrollVertically(1));
         if (topAlpha <= 0 && bottomAlpha <= 0) {
@@ -17559,6 +17883,13 @@ if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.VANILLA_ICE_CREAM) {
         if (id == ANIMATOR_ID_INPUT_FIELD_HEIGHT) {
             checkUi_IslandTotalHeight();
             checkUi_TopViewVisibility();
+            invalidate();
+            if (textFieldContainer != null) {
+                textFieldContainer.invalidate();
+            }
+            if (messageEditTextContainer != null) {
+                messageEditTextContainer.invalidate();
+            }
         } else if (id == ANIMATOR_ID_TOP_VIEW_VISIBILITY) {
             checkUi_IslandTotalHeight();
             checkUi_TopViewVisibility();
@@ -17588,7 +17919,15 @@ if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.VANILLA_ICE_CREAM) {
         if (topView != null) {
             final float y = getMeasuredHeight() - animatorInputFieldHeight.getFactor();
 
-            topView.setTranslationY(y - topView.getMeasuredHeight() * visibility);
+            if (isIOSInputStyle()) {
+                topView.setTranslationY(y - topView.getMeasuredHeight() * visibility);
+                topView.setAlpha(visibility);
+                if (topView instanceof ChatActivityEnterTopView) {
+                    ((ChatActivityEnterTopView) topView).setCloseTranslationY(Math.max(0, animatorInputFieldHeight.getFactor() - dp(44)));
+                }
+            } else {
+                topView.setTranslationY(y - topView.getMeasuredHeight() * visibility);
+            }
             topView.setVisibility(visibility > 0 ? VISIBLE : GONE);
         }
 

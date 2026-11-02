@@ -10,7 +10,7 @@ import org.telegram.messenger.R;
 public class LauncherIconController {
     public static void tryFixLauncherIconIfNeeded() {
         android.content.SharedPreferences prefs = ApplicationLoader.applicationContext.getSharedPreferences("gorillagram_app", Context.MODE_PRIVATE);
-        boolean initialized = prefs.getBoolean("gorilla_icon_initialized_v3", false);
+        boolean initialized = prefs.getBoolean("gorilla_icon_initialized_v4", false);
         if (!initialized) {
             String[] oldAliases = {
                 "GoogleIcon", "ColorfulIcon", "DarkGreenIcon", "NeonIcon",
@@ -23,7 +23,7 @@ public class LauncherIconController {
                 } catch (Exception ignored) {}
             }
             setIcon(LauncherIcon.DEFAULT);
-            prefs.edit().putBoolean("gorilla_icon_initialized_v3", true).apply();
+            prefs.edit().putBoolean("gorilla_icon_initialized_v4", true).apply();
             return;
         }
 
@@ -52,7 +52,8 @@ public class LauncherIconController {
     }
 
     public enum LauncherIcon {
-        DEFAULT("DefaultIcon", R.mipmap.ic_launcher_gorilla, R.drawable.transparent, R.string.AppIconGorilla),
+        DEFAULT("DefaultIcon", R.drawable.icon_gorilla_background, R.mipmap.icon_foreground, R.string.AppIconDefault),
+        RED("RedIcon", R.drawable.icon_red_background, R.mipmap.icon_foreground, R.string.AppIconRed),
         TELEGRAM("TelegramIcon", R.drawable.icon_background, R.mipmap.icon_foreground, R.string.AppIconTelegram),
         VINTAGE("VintageIcon", R.drawable.icon_6_background_sa, R.mipmap.icon_6_foreground_sa, R.string.AppIconVintage),
         AQUA("AquaIcon", R.drawable.icon_4_background_sa, R.mipmap.icon_foreground_sa, R.string.AppIconAqua),
@@ -88,7 +89,7 @@ public class LauncherIconController {
         }
 
         public boolean isNekoX() {
-            return this == DEFAULT;
+            return false;
         }
     }
 }

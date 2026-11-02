@@ -137,6 +137,54 @@ object NaConfig {
             ConfigItem.configTypeString,
             "translate,bold,italic,mono,code,strike,underline,quote,spoiler,link,mention,date,regular"
         )
+    val showMenuReply =
+        addConfig(
+            "ShowMenuReply",
+            ConfigItem.configTypeBool,
+            true
+        )
+    val showMenuCopy =
+        addConfig(
+            "ShowMenuCopy",
+            ConfigItem.configTypeBool,
+            true
+        )
+    val showMenuForward =
+        addConfig(
+            "ShowMenuForward",
+            ConfigItem.configTypeBool,
+            true
+        )
+    val showMenuEdit =
+        addConfig(
+            "ShowMenuEdit",
+            ConfigItem.configTypeBool,
+            true
+        )
+    val showMenuPin =
+        addConfig(
+            "ShowMenuPin",
+            ConfigItem.configTypeBool,
+            true
+        )
+    val showMenuDelete =
+        addConfig(
+            "ShowMenuDelete",
+            ConfigItem.configTypeBool,
+            true
+        )
+    val showMenuViewThread =
+        addConfig(
+            "ShowMenuViewThread",
+            ConfigItem.configTypeBool,
+            true
+        )
+    val messageMenuOrder =
+        addConfig(
+            "MessageMenuOrder",
+            ConfigItem.configTypeString,
+            "reactions,reply,reply_private,copy,forward,forward_noquote,view_thread,edit,pin,delete,copy_link,copy_frame,copy_photo,copy_as_sticker,add_to_stickers,add_to_favorites,set_reminder,save_message,bookmark,repeat,repeat_as_copy,delete_downloaded_file,view_history,translate,translate_llm,share,hide,report,admin_actions,change_permissions,message_details"
+        )
     val combineMessage =
         addConfig(
             "CombineMessage",
@@ -628,7 +676,7 @@ object NaConfig {
         addConfig(
             "PushServiceType",
             ConfigItem.configTypeInt,
-            1
+            0
         )
     val pushServiceTypeInAppDialog =
         addConfig(
@@ -658,7 +706,19 @@ object NaConfig {
         addConfig(
             "DisablePreviewVideoSoundShortcut",
             ConfigItem.configTypeBool,
+            false
+        )
+    val playVideoWithVolumeKeys =
+        addConfig(
+            "PlayVideoWithVolumeKeys",
+            ConfigItem.configTypeBool,
             true
+        )
+    val draggableBottomBar =
+        addConfig(
+            "DraggableBottomBar",
+            ConfigItem.configTypeBool,
+            false
         )
     val regexFiltersEnabled =
         addConfig(

@@ -12,10 +12,25 @@ public class ChatActivityEnterTopView extends FrameLayout {
 
     private View replyView;
     private EditView editView;
+    private View closeView;
     private boolean editMode;
 
     public ChatActivityEnterTopView(Context context) {
         super(context);
+    }
+
+    public void setCloseView(View closeView) {
+        this.closeView = closeView;
+    }
+
+    public View getCloseView() {
+        return closeView;
+    }
+
+    public void setCloseTranslationY(float translationY) {
+        if (closeView != null) {
+            closeView.setTranslationY(translationY);
+        }
     }
 
     public void addReplyView(View replyView, LayoutParams layoutParams) {

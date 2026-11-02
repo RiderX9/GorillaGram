@@ -103,6 +103,9 @@ public class ActionBar extends FrameLayout implements FactorAnimator.Target, The
     private BlurredBackgroundDrawable glassDrawable;
     private BlurredBackgroundDrawable glassDrawableBack;
     private BlurredBackgroundDrawable glassDrawableMenu;
+    private final org.telegram.ui.Components.ButtonBounce backPillBounce = new org.telegram.ui.Components.ButtonBounce(this);
+    private final org.telegram.ui.Components.ButtonBounce centerPillBounce = new org.telegram.ui.Components.ButtonBounce(this);
+    private final org.telegram.ui.Components.ButtonBounce menuPillBounce = new org.telegram.ui.Components.ButtonBounce(this);
     private INavigationLayout.BackButtonState backButtonState = INavigationLayout.BackButtonState.BACK;
     public UnreadImageView backButtonImageView;
     private BackupImageView avatarSearchImageView;
@@ -411,7 +414,35 @@ public class ActionBar extends FrameLayout implements FactorAnimator.Target, The
             canvas.save();
             canvas.clipRect(0, -getTranslationY() + (occupyStatusBar ? AndroidUtilities.statusBarHeight : 0), getMeasuredWidth(), getMeasuredHeight());
         }
+
+        final boolean isGlassBack = glassMode && child == backButtonImageView && glassDrawableBack != null;
+        final boolean isGlassCenter = glassMode && (child == chatAvatarContainer || child == titlesContainer) && glassDrawable != null;
+        final boolean isGlassMenu = glassMode && child == menu && glassDrawableMenu != null;
+
+        float pillScale = 1f;
+        float pillCx = 0, pillCy = 0;
+        if (isGlassBack) {
+            pillScale = backPillBounce.getScale(0.08f);
+            pillCx = glassDrawableBack.getBounds().exactCenterX();
+            pillCy = glassDrawableBack.getBounds().exactCenterY();
+        } else if (isGlassCenter) {
+            pillScale = centerPillBounce.getScale(0.08f);
+            pillCx = glassDrawable.getBounds().exactCenterX();
+            pillCy = glassDrawable.getBounds().exactCenterY();
+        } else if (isGlassMenu) {
+            pillScale = menuPillBounce.getScale(0.08f);
+            pillCx = glassDrawableMenu.getBounds().exactCenterX();
+            pillCy = glassDrawableMenu.getBounds().exactCenterY();
+        }
+
+        if (pillScale != 1f) {
+            canvas.save();
+            canvas.scale(pillScale, pillScale, pillCx, pillCy);
+        }
         boolean result = super.drawChild(canvas, child, drawingTime);
+        if (pillScale != 1f) {
+            canvas.restore();
+        }
         if (supportsHolidayImage && !titleOverlayShown && !LocaleController.isRTL && (child == titleTextView[0] || child == titleTextView[1] || child == titlesContainer && useContainerForTitles)) {
             Drawable drawable = Theme.getCurrentHolidayDrawable();
             if (drawable != null) {
@@ -1907,6 +1938,34 @@ public class ActionBar extends FrameLayout implements FactorAnimator.Target, The
 
     @Override
     public boolean dispatchTouchEvent(MotionEvent ev) {
+        if (glassMode) {
+            final int action = ev.getActionMasked();
+            final int x = (int) ev.getX();
+            final int y = (int) ev.getY();
+            if (action == MotionEvent.ACTION_DOWN) {
+                if (glassDrawableBack != null && glassDrawableBack.getBounds().contains(x, y)) {
+                    backPillBounce.setPressed(true);
+                } else if (glassDrawable != null && glassDrawable.getBounds().contains(x, y)) {
+                    centerPillBounce.setPressed(true);
+                } else if (glassDrawableMenu != null && glassDrawableMenu.getBounds().contains(x, y)) {
+                    menuPillBounce.setPressed(true);
+                }
+            } else if (action == MotionEvent.ACTION_UP || action == MotionEvent.ACTION_CANCEL) {
+                backPillBounce.setPressed(false);
+                centerPillBounce.setPressed(false);
+                menuPillBounce.setPressed(false);
+            } else if (action == MotionEvent.ACTION_MOVE) {
+                if (backPillBounce.isPressed() && (glassDrawableBack == null || !glassDrawableBack.getBounds().contains(x, y))) {
+                    backPillBounce.setPressed(false);
+                }
+                if (centerPillBounce.isPressed() && (glassDrawable == null || !glassDrawable.getBounds().contains(x, y))) {
+                    centerPillBounce.setPressed(false);
+                }
+                if (menuPillBounce.isPressed() && (glassDrawableMenu == null || !glassDrawableMenu.getBounds().contains(x, y))) {
+                    menuPillBounce.setPressed(false);
+                }
+            }
+        }
         if (chatAvatarContainer != null && glassMode) {
             if (ev.getAction() == MotionEvent.ACTION_DOWN) {
                 final int x = (int) ev.getX();
@@ -2332,16 +2391,41 @@ public class ActionBar extends FrameLayout implements FactorAnimator.Target, The
             final int right = getWidth() - (centeredAvatarPill ? s + p : menuWidthWithPadding);
 
             glassDrawable.setBounds(left, t, right, b);
-            glassDrawable.draw(canvas);
+            final float scale = centerPillBounce.getScale(0.08f);
+            if (scale != 1f) {
+                canvas.save();
+                canvas.scale(scale, scale, (left + right) / 2f, (t + b) / 2f);
+                glassDrawable.draw(canvas);
+                canvas.restore();
+            } else {
+                glassDrawable.draw(canvas);
+            }
         }
         if (glassDrawableBack != null && hasBackButton) {
             glassDrawableBack.setBounds(0, t, s + p * 2, b);
-            glassDrawableBack.draw(canvas);
+            final float scale = backPillBounce.getScale(0.08f);
+            if (scale != 1f) {
+                canvas.save();
+                canvas.scale(scale, scale, (s + p * 2) / 2f, (t + b) / 2f);
+                glassDrawableBack.draw(canvas);
+                canvas.restore();
+            } else {
+                glassDrawableBack.draw(canvas);
+            }
         }
         if (glassDrawableMenu != null && (menuWidth > 0 || centeredAvatarPill) && !glassOnlyBack && !doNotDrawGlassMenu) {
-            glassDrawableMenu.setBounds(getWidth() - (centeredAvatarPill ? s : Math.max(s, menuWidth)) - p * 2, t, getWidth(), b);
+            final int menuLeft = getWidth() - (centeredAvatarPill ? s : Math.max(s, menuWidth)) - p * 2;
+            glassDrawableMenu.setBounds(menuLeft, t, getWidth(), b);
             glassDrawableMenu.setAlpha(centeredAvatarPill || hasForcedMenuWidth ? 255 : (int) (255 * animatorHasMenuItems.getFloatValue()));
-            glassDrawableMenu.draw(canvas);
+            final float scale = menuPillBounce.getScale(0.08f);
+            if (scale != 1f) {
+                canvas.save();
+                canvas.scale(scale, scale, (menuLeft + getWidth()) / 2f, (t + b) / 2f);
+                glassDrawableMenu.draw(canvas);
+                canvas.restore();
+            } else {
+                glassDrawableMenu.draw(canvas);
+            }
         }
 
         if (blurredBackground && actionBarColor != Color.TRANSPARENT) {

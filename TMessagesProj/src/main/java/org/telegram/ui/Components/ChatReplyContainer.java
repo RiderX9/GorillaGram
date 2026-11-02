@@ -116,9 +116,10 @@ public class ChatReplyContainer extends FrameLayout {
             super(context);
             this.resourcesProvider = resourcesProvider;
 
+            final int iconLeft = tw.nekomimi.nekogram.NekoConfig.iOSMessageInputField.Bool() ? 4 : 0;
             icon = new ImageView(context);
             icon.setScaleType(ImageView.ScaleType.CENTER);
-            addView(icon, LayoutHelper.createFrame(52, 46, Gravity.TOP | Gravity.LEFT));
+            addView(icon, LayoutHelper.createFrame(52, 46, Gravity.TOP | Gravity.LEFT, iconLeft, 0, 0, 0));
 
             name = new SimpleTextView(context);
             name.setTextSize(14);

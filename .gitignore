@@ -23,3 +23,26 @@ AGENTS.md
 chaq_inspect/
 __pycache__/
 *.py[cod]
+
+# Android binaries and build artifacts
+*.apk
+*.ap_
+*.aab
+*.idsig
+
+# Sensitive Keystores, Certificates, and API keys
+*.jks
+*.keystore
+*.p12
+*.pem
+*.key
+google-services.json
+
+# Diagnostic logs and memory dumps
+*.log
+*.hprof
+
+# Editor backups and temporary files
+*.swp
+*~
+Thumbs.db

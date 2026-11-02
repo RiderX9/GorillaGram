@@ -427,6 +427,30 @@ public abstract class ViewPagerActivity extends BaseFragment {
             invalidate();
         }
 
+        @Override
+        protected boolean canScroll(MotionEvent e) {
+            if (xyz.nextalone.nagram.NaConfig.INSTANCE.getDraggableBottomBar().Bool()) {
+                return false;
+            }
+            return super.canScroll(e);
+        }
+
+        @Override
+        public boolean onInterceptTouchEvent(MotionEvent ev) {
+            if (xyz.nextalone.nagram.NaConfig.INSTANCE.getDraggableBottomBar().Bool()) {
+                return false;
+            }
+            return super.onInterceptTouchEvent(ev);
+        }
+
+        @Override
+        public boolean onTouchEvent(MotionEvent ev) {
+            if (xyz.nextalone.nagram.NaConfig.INSTANCE.getDraggableBottomBar().Bool()) {
+                return false;
+            }
+            return super.onTouchEvent(ev);
+        }
+
         private final Path clipPath = new Path();
 
         @Override
@@ -473,11 +497,17 @@ public abstract class ViewPagerActivity extends BaseFragment {
 
         @Override
         protected boolean canScrollBackward(MotionEvent e) {
+            if (xyz.nextalone.nagram.NaConfig.INSTANCE.getDraggableBottomBar().Bool()) {
+                return false;
+            }
             return ViewPagerActivity.this.canScrollBackward(e);
         }
 
         @Override
         protected boolean canScrollForward(MotionEvent e) {
+            if (xyz.nextalone.nagram.NaConfig.INSTANCE.getDraggableBottomBar().Bool()) {
+                return false;
+            }
             return ViewPagerActivity.this.canScrollForward(e);
         }
 

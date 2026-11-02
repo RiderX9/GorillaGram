@@ -462,6 +462,11 @@ public class MainTabsLayout extends AnimatedLinearLayout {
         }
 
         if (found != null) {
+            if (lastLongSelectedView != null && lastLongSelectedView != found) {
+                try {
+                    performHapticFeedback(android.view.HapticFeedbackConstants.KEYBOARD_TAP, android.view.HapticFeedbackConstants.FLAG_IGNORE_GLOBAL_SETTING);
+                } catch (Exception ignored) {}
+            }
             lastLongSelectedView = found;
             setTabSelected(found, true);
 
@@ -650,9 +655,124 @@ public class MainTabsLayout extends AnimatedLinearLayout {
         view.setPivotY(pivotY);
     }
 
+    private boolean isDragSelecting;
+    private float dragStartX;
+    private float dragStartY;
+    private boolean isPopupMenuShowing;
+
+    public void setPopupMenuShowing(boolean showing) {
+        isPopupMenuShowing = showing;
+        if (showing) {
+            cancelDragAndLock();
+        }
+    }
+
+    public void cancelDragAndLock() {
+        isPopupMenuShowing = true;
+        if (isDragSelecting || isInLongPress) {
+            isDragSelecting = false;
+            isInLongPress = false;
+            checkLongMove(0, 0, false, true);
+            AndroidUtilities.cancelRunOnUIThread(restoreDrawSelector);
+            restoreDrawSelector.run();
+            lastLongSelectedView = null;
+            setPivotX(getWidth() / 2f);
+            setPivotY(getHeight() / 2f);
+            setScaleX(1f);
+            setScaleY(1f);
+            invalidate();
+        }
+        dragStartX = Float.MAX_VALUE;
+        dragStartY = Float.MAX_VALUE;
+        long cancelTime = android.os.SystemClock.uptimeMillis();
+        MotionEvent cancelEvent = MotionEvent.obtain(cancelTime, cancelTime, MotionEvent.ACTION_CANCEL, 0f, 0f, 0);
+        clickHelper.onTouchEvent(this, cancelEvent);
+        cancelEvent.recycle();
+    }
+
     @Override
     public boolean dispatchTouchEvent(MotionEvent ev) {
-        clickHelper.onTouchEvent(this, ev);
+        if (xyz.nextalone.nagram.NaConfig.INSTANCE.getDraggableBottomBar().Bool()) {
+            if (isPopupMenuShowing) {
+                isDragSelecting = false;
+                return super.dispatchTouchEvent(ev);
+            }
+
+            final int action = ev.getActionMasked();
+            final float x = ev.getX();
+            final float y = ev.getY();
+
+            if (action == MotionEvent.ACTION_DOWN) {
+                dragStartX = x;
+                dragStartY = y;
+                isDragSelecting = false;
+            } else if (action == MotionEvent.ACTION_MOVE) {
+                float dx = x - dragStartX;
+                float dy = y - dragStartY;
+                if (!isDragSelecting && Math.abs(dx) > AndroidUtilities.dp(6) && Math.abs(dx) > Math.abs(dy)) {
+                    isDragSelecting = true;
+                    if (getParent() != null) {
+                        getParent().requestDisallowInterceptTouchEvent(true);
+                    }
+                    MotionEvent cancelEvent = MotionEvent.obtain(ev);
+                    cancelEvent.setAction(MotionEvent.ACTION_CANCEL);
+                    clickHelper.onTouchEvent(this, cancelEvent);
+                    super.dispatchTouchEvent(cancelEvent);
+                    cancelEvent.recycle();
+
+                    isInLongPress = true;
+                    AndroidUtilities.cancelRunOnUIThread(restoreDrawSelector);
+                    setPivotX(getWidth() / 2f);
+                    setPivotY(getHeight() / 2f);
+                    setScaleX(1f);
+                    setScaleY(1f);
+                    setSkipDrawSelector(true);
+                    checkLongMove(x, y, true, false);
+                    invalidate();
+                }
+
+                if (isDragSelecting) {
+                    checkLongMove(x, y, false, false);
+                    invalidate();
+                    return true;
+                }
+            } else if (action == MotionEvent.ACTION_UP) {
+                if (isDragSelecting) {
+                    isDragSelecting = false;
+                    checkLongMove(x, y, false, true);
+                    isInLongPress = false;
+                    AndroidUtilities.runOnUIThread(restoreDrawSelector, 450);
+                    if (lastLongSelectedView != null) {
+                        lastLongSelectedView.performClick();
+                    }
+                    lastLongSelectedView = null;
+                    setPivotX(getWidth() / 2f);
+                    setPivotY(getHeight() / 2f);
+                    setScaleX(1f);
+                    setScaleY(1f);
+                    invalidate();
+                    return true;
+                }
+            } else if (action == MotionEvent.ACTION_CANCEL) {
+                if (isDragSelecting) {
+                    isDragSelecting = false;
+                    checkLongMove(x, y, false, true);
+                    isInLongPress = false;
+                    AndroidUtilities.runOnUIThread(restoreDrawSelector, 450);
+                    lastLongSelectedView = null;
+                    setPivotX(getWidth() / 2f);
+                    setPivotY(getHeight() / 2f);
+                    setScaleX(1f);
+                    setScaleY(1f);
+                    invalidate();
+                    return true;
+                }
+            }
+        }
+
+        if (!isPopupMenuShowing) {
+            clickHelper.onTouchEvent(this, ev);
+        }
         return super.dispatchTouchEvent(ev);
     }
 

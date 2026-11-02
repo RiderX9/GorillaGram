@@ -60,6 +60,10 @@ public class CaptionPhotoViewer extends CaptionContainerView {
     private final Runnable applyCaption;
 
     private final RectF moveButtonBounds = new RectF();
+    private final RectF doneButtonBounds = new RectF();
+    private final ButtonBounce doneBounce = new ButtonBounce(this);
+    private Paint donePaint;
+    private Drawable doneDrawable;
     private Drawable moveButtonIcon;
     private final AnimatedTextView.AnimatedTextDrawable moveButtonText = new AnimatedTextView.AnimatedTextDrawable();
     private final ButtonBounce moveButtonBounce = new ButtonBounce(this);
@@ -119,11 +123,23 @@ public class CaptionPhotoViewer extends CaptionContainerView {
         aiButton = new ImageView(context);
         aiButton.setImageDrawable(aiButtonIcon = new AiButtonDrawable(context));
         aiButton.setScaleType(ImageView.ScaleType.CENTER);
-        aiButton.setColorFilter(new PorterDuffColorFilter(0xBBFFFFFF, PorterDuff.Mode.MULTIPLY));
+        aiButton.setColorFilter(new PorterDuffColorFilter(0xFFFFFFFF, PorterDuff.Mode.SRC_IN));
         aiButton.setBackground(Theme.createSelectorDrawable(0x40FFFFFF, Theme.RIPPLE_MASK_CIRCLE_20DP, dp(16)));
         addView(aiButton, LayoutHelper.createFrame(44, 44, Gravity.TOP | Gravity.RIGHT, 8, 0, 8, 0));
         aiButton.setContentDescription(getString(R.string.AIEditor));
         ScaleStateListAnimator.apply(aiButton);
+
+        if (tw.nekomimi.nekogram.NekoConfig.iOSMessageInputField.Bool()) {
+            MarginLayoutParams mlp = (MarginLayoutParams) editText.getLayoutParams();
+            mlp.leftMargin = dp(7);
+            mlp.rightMargin = dp(7);
+            editText.setLayoutParams(mlp);
+
+            editText.getEditText().setLayoutParams(LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.MATCH_PARENT, Gravity.LEFT | Gravity.CENTER_VERTICAL, 14, 0, 44, 0));
+            editText.getEmojiButton().setLayoutParams(LayoutHelper.createFrame(40, 40, Gravity.BOTTOM | Gravity.RIGHT, 0, 0, 4, 0));
+            editText.getEditText().setTranslationX(0);
+        }
+
         editText.getEditText().addTextChangedListener(new TextWatcher() {
             @Override
             public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
@@ -131,27 +147,17 @@ public class CaptionPhotoViewer extends CaptionContainerView {
             public void onTextChanged(CharSequence s, int start, int before, int count) {}
             @Override
             public void afterTextChanged(Editable editable) {
-                showAiButton(editText.getEditText().getLineCount() > 2 && editable != null && !TextUtils.isEmpty(editable.toString().trim()));
+                boolean hasText = editable != null && !TextUtils.isEmpty(editable.toString().trim());
+                int lineCount = editText.getEditText().getLineCount();
+                boolean show = hasText && (tw.nekomimi.nekogram.NekoConfig.iOSMessageInputField.Bool() ? (lineCount > 1) : (lineCount > 2));
+                showAiButton(show);
             }
         });
         aiButton.setVisibility(View.GONE);
         aiButton.setAlpha(0.0f);
         aiButton.setScaleX(0.6f);
         aiButton.setScaleY(0.6f);
-        aiButton.setOnClickListener(v -> {
-            MessagesController.getGlobalMainSettings().edit().putInt("aihintshown", 3).apply();
-            new AIEditorAlert(getContext(), new DarkThemeResourceProvider())
-                .setText(editText.getText())
-                .setOnUse(text -> {
-                    editText.setText(text);
-                    editText.setSelection(text.length(), text.length());
-                })
-                .setOnSend(0, true, (text, scheduleDate, scheduleRepeatPeriod, notify) -> {
-                    editText.setText(text);
-                    done();
-                })
-                .show();
-        });
+        aiButton.setOnClickListener(v -> openAiAlert());
 
         timerButton.setOnClickListener(e -> {
             if (timerPopup != null && timerPopup.isShown()) {
@@ -186,7 +192,9 @@ public class CaptionPhotoViewer extends CaptionContainerView {
     @Override
     protected void onLineCountChanged(int oldLineCount, int newLineCount) {
         final CharSequence text = getText();
-        showAiButton(newLineCount > 2 && text != null && !TextUtils.isEmpty(text.toString().trim()));
+        boolean hasText = text != null && !TextUtils.isEmpty(text.toString().trim());
+        boolean show = hasText && (tw.nekomimi.nekogram.NekoConfig.iOSMessageInputField.Bool() ? (newLineCount > 1) : (newLineCount > 2));
+        showAiButton(show);
         if (shownAiButton && (oldLineCount < 3) != (newLineCount < 3)) {
             invalidate();
         }
@@ -207,6 +215,7 @@ public class CaptionPhotoViewer extends CaptionContainerView {
 
     private final AnimatedFloat moveButtonAnimated = new AnimatedFloat(this, 0, 350, CubicBezierInterpolator.EASE_OUT_QUINT);
     private final AnimatedFloat moveButtonExpandedAnimated = new AnimatedFloat(this, 0, 350, CubicBezierInterpolator.EASE_OUT_QUINT);
+    private final AnimatedFloat aiPillExpandedAnimated = new AnimatedFloat(this, 0, 420, CubicBezierInterpolator.EASE_OUT_QUINT);
     private boolean moveButtonVisible;
     private boolean moveButtonExpanded;
 
@@ -241,25 +250,45 @@ public class CaptionPhotoViewer extends CaptionContainerView {
     }
 
     @Override
-    protected void dispatchDraw(Canvas canvas) {
-        super.dispatchDraw(canvas);
-        if (aiButton != null) {
-            aiButton.setTranslationX(-dp(4 * (1f - keyboardT)));
-            aiButton.setTranslationY(
-                (isAtTop() ? bounds.bottom - dp(44) : bounds.top) +
-                (isAtTop() ? 1 : -1) * dp(3) * Utilities.clamp01(-lineCountAnimated.set(editText.getEditText().getLineCount()) + 4)
-            );
+    public int getPadHLeft() {
+        if (tw.nekomimi.nekogram.NekoConfig.iOSMessageInputField.Bool()) {
+            return (int) AndroidUtilities.lerp(dp(7), dp(58), keyboardT);
         }
+        return super.getPadHLeft();
+    }
 
-        final float moveButtonAlpha = moveButtonAnimated.set(moveButtonVisible, !showMoveButton());
+    @Override
+    public int getPadHRight() {
+        if (tw.nekomimi.nekogram.NekoConfig.iOSMessageInputField.Bool()) {
+            return (int) AndroidUtilities.lerp(dp(7), dp(58), keyboardT);
+        }
+        return super.getPadHRight();
+    }
+
+    @Override
+    protected void dispatchDraw(Canvas canvas) {
+        final boolean ios = tw.nekomimi.nekogram.NekoConfig.iOSMessageInputField.Bool();
+        final float aiFactor = ios ? aiPillExpandedAnimated.set(shownAiButton ? 1.0f : 0.0f) : 0f;
+
+        final float moveButtonAlpha = ios ? keyboardT : moveButtonAnimated.set(moveButtonVisible, !showMoveButton());
         final float moveButtonExpanded = moveButtonExpandedAnimated.set(this.moveButtonExpanded);
         if (moveButtonAlpha > 0.0f) {
             float s = moveButtonBounce.getScale(.03f);
             final int offset = dp(4 * (1f - keyboardT));
-            if (isAtTop()) {
-                moveButtonBounds.set(offset + dp(7), bounds.bottom + dp(10), offset + dp(7 + 37) + (moveButtonText.getCurrentWidth() + dp(11)) * moveButtonExpanded, bounds.bottom + dp(10 + 32));
+            if (ios) {
+                float left = dp(7);
+                float right = left + dp(44);
+                if (isAtTop()) {
+                    moveButtonBounds.set(left, bounds.top, right, bounds.top + dp(44) + dp(44) * aiFactor);
+                } else {
+                    moveButtonBounds.set(left, bounds.bottom - dp(44) - dp(44) * aiFactor, right, bounds.bottom);
+                }
             } else {
-                moveButtonBounds.set(offset + dp(7), bounds.top - dp(32 + 10), offset + dp(7 + 37) + (moveButtonText.getCurrentWidth() + dp(11)) * moveButtonExpanded, bounds.top - dp(10));
+                if (isAtTop()) {
+                    moveButtonBounds.set(offset + dp(7), bounds.bottom + dp(10), offset + dp(7 + 37) + (moveButtonText.getCurrentWidth() + dp(11)) * moveButtonExpanded, bounds.bottom + dp(10 + 32) + dp(40) * aiFactor);
+                } else {
+                    moveButtonBounds.set(offset + dp(7), bounds.top - dp(32 + 10) - dp(40) * aiFactor, offset + dp(7 + 37) + (moveButtonText.getCurrentWidth() + dp(11)) * moveButtonExpanded, bounds.top - dp(10));
+                }
             }
             if (moveButtonAlpha < 1) {
                 canvas.saveLayerAlpha(moveButtonBounds, (int) (0xFF * moveButtonAlpha), Canvas.ALL_SAVE_FLAG);
@@ -268,14 +297,13 @@ public class CaptionPhotoViewer extends CaptionContainerView {
             }
             canvas.scale(s, s, moveButtonBounds.centerX(), moveButtonBounds.centerY());
             canvas.clipRect(moveButtonBounds);
-            float r = dpf2(16f);
 
             if (factoryForMentions != null) {
                 if (backgroundForCaptionButton == null) {
                     backgroundForCaptionButton = factoryForMentions.create(this)
                         .setColorProvider(BlurredBackgroundProviderImpl.photoViewer(resourcesProvider))
                         .setPadding(dp(5))
-                        .setRadius(dp(16));
+                        .setRadius(ios ? dp(22) : dp(16));
                 }
 
                 moveButtonBounds.round(AndroidUtilities.rectTmp2);
@@ -283,13 +311,67 @@ public class CaptionPhotoViewer extends CaptionContainerView {
                 backgroundForCaptionButton.setBounds(AndroidUtilities.rectTmp2);
                 backgroundForCaptionButton.draw(canvas);
             }
-            moveButtonIcon.setBounds((int) (moveButtonBounds.left + dp(9)), (int) (moveButtonBounds.centerY() - dp(10)), (int) (moveButtonBounds.left + dp(9 + 20)), (int) (moveButtonBounds.centerY() + dp(10)));
+            int iconCenterY = ios ? (int) (isAtTop() ? (moveButtonBounds.top + dp(22)) : (moveButtonBounds.bottom - dp(22))) : (int) (isAtTop() ? (moveButtonBounds.top + dp(16)) : (moveButtonBounds.bottom - dp(16)));
+            int iconCenterX = ios ? (int) moveButtonBounds.centerX() : (int) (moveButtonBounds.left + dp(19));
+            moveButtonIcon.setBounds(iconCenterX - dp(10), iconCenterY - dp(10), iconCenterX + dp(10), iconCenterY + dp(10));
             moveButtonIcon.draw(canvas);
-            moveButtonText.setBounds(moveButtonBounds.left + dp(37), moveButtonBounds.top, moveButtonBounds.right, moveButtonBounds.bottom);
-            moveButtonText.setAlpha((int) (0xFF * moveButtonExpanded));
-            moveButtonText.draw(canvas);
+            if (!ios) {
+                moveButtonText.setBounds(moveButtonBounds.left + dp(37), moveButtonBounds.top, moveButtonBounds.right, moveButtonBounds.bottom);
+                moveButtonText.setAlpha((int) (0xFF * moveButtonExpanded));
+                moveButtonText.draw(canvas);
+            } else if (aiFactor > 0) {
+                int aiCenterY = (int) (isAtTop() ? (moveButtonBounds.bottom - dp(22)) : (moveButtonBounds.top + dp(22)));
+                aiButtonIcon.setBounds(iconCenterX - dp(12), aiCenterY - dp(12), iconCenterX + dp(12), aiCenterY + dp(12));
+                aiButtonIcon.setAlpha((int) (0xFF * aiFactor));
+                aiButtonIcon.draw(canvas);
+            }
             canvas.restore();
         }
+
+        if (aiButton != null && !ios) {
+            aiButton.setTranslationX(-dp(4 * (1f - keyboardT)));
+            aiButton.setTranslationY(
+                (isAtTop() ? bounds.bottom - dp(44) : bounds.top) +
+                (isAtTop() ? 1 : -1) * dp(3) * Utilities.clamp01(-lineCountAnimated.set(editText.getEditText().getLineCount()) + 4)
+            );
+        }
+
+        if (ios && keyboardT > 0) {
+            float right = getWidth() - dp(7);
+            float left = right - dp(44);
+            float top = isAtTop() ? bounds.top : (bounds.bottom - dp(44));
+            float bottom = top + dp(44);
+            doneButtonBounds.set(left, top, right, bottom);
+
+            float s = doneBounce.getScale(0.04f) * Math.min(1.0f, keyboardT * 1.5f);
+            canvas.save();
+            canvas.scale(s, s, doneButtonBounds.centerX(), doneButtonBounds.centerY());
+            if (keyboardT < 1f) {
+                canvas.saveLayerAlpha(doneButtonBounds, (int) (0xFF * keyboardT), Canvas.ALL_SAVE_FLAG);
+            }
+
+            if (donePaint == null) {
+                donePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+                donePaint.setColor(0xFFFFFFFF);
+            }
+            canvas.drawCircle(doneButtonBounds.centerX(), doneButtonBounds.centerY(), dp(22), donePaint);
+
+            if (doneDrawable == null) {
+                doneDrawable = getContext().getResources().getDrawable(R.drawable.input_done).mutate();
+                doneDrawable.setColorFilter(new PorterDuffColorFilter(0xFF000000, PorterDuff.Mode.SRC_IN));
+            }
+            int cx = (int) doneButtonBounds.centerX();
+            int cy = (int) doneButtonBounds.centerY();
+            doneDrawable.setBounds(cx - dp(12), cy - dp(12), cx + dp(12), cy + dp(12));
+            doneDrawable.draw(canvas);
+
+            if (keyboardT < 1f) {
+                canvas.restore();
+            }
+            canvas.restore();
+        }
+
+        super.dispatchDraw(canvas);
     }
 
     public void setOnAddPhotoClick(View.OnClickListener listener) {
@@ -313,13 +395,18 @@ public class CaptionPhotoViewer extends CaptionContainerView {
         }
         updateEditTextLeft();
 
-        MarginLayoutParams lp = (MarginLayoutParams) editText.getLayoutParams();
-        lp.rightMargin = dp(32 + (addPhotoVisible && timerVisible ? 33 : 0));
-        editText.setLayoutParams(lp);
+        if (!tw.nekomimi.nekogram.NekoConfig.iOSMessageInputField.Bool()) {
+            MarginLayoutParams lp = (MarginLayoutParams) editText.getLayoutParams();
+            lp.rightMargin = dp(32 + (addPhotoVisible && timerVisible ? 33 : 0));
+            editText.setLayoutParams(lp);
+        }
     }
 
     @Override
     protected int getEditTextLeft() {
+        if (tw.nekomimi.nekogram.NekoConfig.iOSMessageInputField.Bool()) {
+            return dp(26);
+        }
         return addPhotoVisible ? dp(31) : 0;
     }
 
@@ -351,9 +438,11 @@ public class CaptionPhotoViewer extends CaptionContainerView {
             timerButton.setTranslationX(visible ? 0 : dp(8));
         }
 
-        MarginLayoutParams lp = (MarginLayoutParams) editText.getLayoutParams();
-        lp.rightMargin = dp(32 + (addPhotoVisible && timerVisible ? 33 : 0));
-        editText.setLayoutParams(lp);
+        if (!tw.nekomimi.nekogram.NekoConfig.iOSMessageInputField.Bool()) {
+            MarginLayoutParams lp = (MarginLayoutParams) editText.getLayoutParams();
+            lp.rightMargin = dp(32 + (addPhotoVisible && timerVisible ? 33 : 0));
+            editText.setLayoutParams(lp);
+        }
     }
 
     public boolean hasTimer() {
@@ -459,6 +548,26 @@ public class CaptionPhotoViewer extends CaptionContainerView {
     protected void onUpdateShowKeyboard(float keyboardT) {
         timerButton.setAlpha(1f - keyboardT);
         addPhotoButton.setAlpha(1f - keyboardT);
+        if (tw.nekomimi.nekogram.NekoConfig.iOSMessageInputField.Bool()) {
+            int padLeft = (int) AndroidUtilities.lerp(dp(7), dp(58), keyboardT);
+            int padRight = (int) AndroidUtilities.lerp(dp(7), dp(58), keyboardT);
+            MarginLayoutParams mlp = (MarginLayoutParams) editText.getLayoutParams();
+            if (mlp.leftMargin != padLeft || mlp.rightMargin != padRight) {
+                mlp.leftMargin = padLeft;
+                mlp.rightMargin = padRight;
+                editText.setLayoutParams(mlp);
+            }
+            editText.getEditText().setTranslationX(0);
+        }
+    }
+
+    @Override
+    public void updateEditTextLeft() {
+        if (tw.nekomimi.nekogram.NekoConfig.iOSMessageInputField.Bool()) {
+            editText.getEditText().setTranslationX(0);
+            return;
+        }
+        super.updateEditTextLeft();
     }
 
     @Override
@@ -509,15 +618,71 @@ public class CaptionPhotoViewer extends CaptionContainerView {
         return super.getEditTextHeight();
     }
 
+    private boolean aiPressed;
+
+    private void openAiAlert() {
+        MessagesController.getGlobalMainSettings().edit().putInt("aihintshown", 3).apply();
+        new AIEditorAlert(getContext(), new DarkThemeResourceProvider())
+            .setText(editText.getText())
+            .setOnUse(text -> {
+                editText.setText(text);
+                editText.setSelection(text.length(), text.length());
+            })
+            .setOnSend(0, true, (text, scheduleDate, scheduleRepeatPeriod, notify) -> {
+                editText.setText(text);
+                done();
+            })
+            .show();
+    }
+
     @Override
     public boolean dispatchTouchEvent(MotionEvent event) {
+        final boolean ios = tw.nekomimi.nekogram.NekoConfig.iOSMessageInputField.Bool();
         if (event.getAction() == MotionEvent.ACTION_DOWN) {
-            moveButtonBounce.setPressed(moveButtonAnimated.get() > 0 && moveButtonBounds.contains(event.getX(), event.getY()));
+            if (ios && keyboardT > 0 && doneButtonBounds.contains(event.getX(), event.getY())) {
+                doneBounce.setPressed(true);
+                return true;
+            }
+            if (ios && shownAiButton && aiPillExpandedAnimated.get() > 0.3f) {
+                float aiTop = isAtTop() ? (moveButtonBounds.bottom - dp(44)) : moveButtonBounds.top;
+                float aiBottom = isAtTop() ? moveButtonBounds.bottom : (moveButtonBounds.top + dp(44));
+                if (event.getX() >= moveButtonBounds.left && event.getX() <= moveButtonBounds.right && event.getY() >= aiTop && event.getY() <= aiBottom) {
+                    aiPressed = true;
+                    return true;
+                }
+            }
+            boolean canPressMove = ios ? (keyboardT > 0 || moveButtonVisible) : (moveButtonAnimated.get() > 0);
+            moveButtonBounce.setPressed(canPressMove && moveButtonBounds.contains(event.getX(), event.getY()));
         } else if (event.getAction() == MotionEvent.ACTION_MOVE) {
-            if (moveButtonBounce.isPressed() && (moveButtonAnimated.get() <= 0 || !moveButtonBounds.contains(event.getX(), event.getY()))) {
+            if (doneBounce.isPressed() && !doneButtonBounds.contains(event.getX(), event.getY())) {
+                doneBounce.setPressed(false);
+            }
+            if (aiPressed) {
+                float aiTop = isAtTop() ? (moveButtonBounds.bottom - dp(44)) : moveButtonBounds.top;
+                float aiBottom = isAtTop() ? moveButtonBounds.bottom : (moveButtonBounds.top + dp(44));
+                if (event.getX() < moveButtonBounds.left || event.getX() > moveButtonBounds.right || event.getY() < aiTop || event.getY() > aiBottom) {
+                    aiPressed = false;
+                }
+            }
+            boolean canPressMove = ios ? (keyboardT > 0 || moveButtonVisible) : (moveButtonAnimated.get() > 0);
+            if (moveButtonBounce.isPressed() && (!canPressMove || !moveButtonBounds.contains(event.getX(), event.getY()))) {
                 moveButtonBounce.setPressed(false);
             }
         } else if (event.getAction() == MotionEvent.ACTION_UP || event.getAction() == MotionEvent.ACTION_CANCEL) {
+            if (doneBounce.isPressed()) {
+                if (event.getAction() == MotionEvent.ACTION_UP) {
+                    done();
+                }
+                doneBounce.setPressed(false);
+                return true;
+            }
+            if (aiPressed) {
+                if (event.getAction() == MotionEvent.ACTION_UP) {
+                    openAiAlert();
+                }
+                aiPressed = false;
+                return true;
+            }
             if (moveButtonBounce.isPressed()) {
                 if (event.getAction() == MotionEvent.ACTION_UP) {
                     onMoveButtonClick();
@@ -527,7 +692,7 @@ public class CaptionPhotoViewer extends CaptionContainerView {
                 return true;
             }
         }
-        return moveButtonBounce.isPressed() || super.dispatchTouchEvent(event);
+        return doneBounce.isPressed() || aiPressed || moveButtonBounce.isPressed() || super.dispatchTouchEvent(event);
     }
 
 
@@ -540,6 +705,13 @@ public class CaptionPhotoViewer extends CaptionContainerView {
             MessagesController.getInstance(currentAccount).getTonesController().load();
         }
         shownAiButton = show;
+        invalidate();
+        if (tw.nekomimi.nekogram.NekoConfig.iOSMessageInputField.Bool()) {
+            if (show) {
+                postDelayed(aiButtonIcon::animate, 220);
+            }
+            return;
+        }
         aiButton.setVisibility(View.VISIBLE);
         aiButton.animate()
             .alpha(show ? 1.0f : 0.0f)

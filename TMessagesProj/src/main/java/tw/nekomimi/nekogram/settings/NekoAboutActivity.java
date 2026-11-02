@@ -12,6 +12,7 @@ import org.telegram.messenger.BuildConfig;
 import org.telegram.messenger.BuildVars;
 import org.telegram.messenger.FileLog;
 import org.telegram.messenger.R;
+import org.telegram.messenger.browser.Browser;
 import org.telegram.ui.Cells.TextCell;
 import org.telegram.ui.Cells.TextDetailSettingsCell;
 import org.telegram.ui.ProfileActivity;
@@ -24,6 +25,8 @@ public class NekoAboutActivity extends BaseNekoSettingsActivity {
 
     private int infoHeaderRow;
     private int versionRow;
+    private int githubRow;
+    private int developerRow;
     private int toggleLogsRow;
     private int sendLogsRow;
     private int clearLogsRow;
@@ -36,6 +39,8 @@ public class NekoAboutActivity extends BaseNekoSettingsActivity {
 
         infoHeaderRow = addRow();
         versionRow = addRow();
+        githubRow = addRow();
+        developerRow = addRow();
         toggleLogsRow = addRow();
         if (BuildVars.LOGS_ENABLED) {
             sendLogsRow = addRow();
@@ -60,7 +65,11 @@ public class NekoAboutActivity extends BaseNekoSettingsActivity {
 
     @Override
     protected void onItemClick(View view, int position, float x, float y) {
-        if (position == toggleLogsRow) {
+        if (position == githubRow) {
+            Browser.openUrl(getParentActivity(), "https://github.com/RiderX9/GorillaGram");
+        } else if (position == developerRow) {
+            Browser.openUrl(getParentActivity(), "https://riderx9.github.io/Developer/");
+        } else if (position == toggleLogsRow) {
             boolean wasLogsEnabled = BuildVars.LOGS_ENABLED;
             AndroidUtil.toggleLogs();
             listAdapter.notifyItemChanged(toggleLogsRow);
@@ -113,12 +122,16 @@ public class NekoAboutActivity extends BaseNekoSettingsActivity {
                     TextDetailSettingsCell detailCell = (TextDetailSettingsCell) holder.itemView;
                     if (position == versionRow) {
                         detailCell.setMultilineDetail(true);
-                        detailCell.setTextAndValue(getSimpleVersion(), getString(R.string.NaxAboutDesc), false);
+                        detailCell.setTextAndValue(getSimpleVersion(), getString(R.string.NaxAboutDesc), true);
                     }
                     break;
                 case TYPE_TEXT:
                     TextCell textCell = (TextCell) holder.itemView;
-                    if (position == toggleLogsRow) {
+                    if (position == githubRow) {
+                        textCell.setTextAndValueAndIcon("GitHub", "RiderX9/GorillaGram", R.drawable.github_logo_white, true);
+                    } else if (position == developerRow) {
+                        textCell.setTextAndValueAndIcon("Developer", "riderx9.github.io", R.drawable.menu_website, true);
+                    } else if (position == toggleLogsRow) {
                         textCell.setTextAndIcon(BuildVars.LOGS_ENABLED ? getString(R.string.DebugMenuDisableLogs) : getString(R.string.DebugMenuEnableLogs), R.drawable.bug, sendLogsRow != -1);
                     } else if (position == sendLogsRow) {
                         textCell.setTextAndIcon(getString(R.string.DebugSendLogs), R.drawable.ic_upward, true);

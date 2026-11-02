@@ -885,8 +885,7 @@ FileLog.e(finalRequestObject + " got error " + error.code + " " + error.text);
         AndroidUtilities.runOnUIThread(() -> {
             AccountInstance accountInstance = AccountInstance.getInstance(currentAccount);
             if (accountInstance.getUserConfig().getClientUserId() != 0) {
-                accountInstance.getUserConfig().clearConfig();
-                accountInstance.getMessagesController().performLogout(0);
+                FileLog.e("ConnectionsManager: onLogout received from MTProto for account " + currentAccount + ", ignoring automatic session wipe to protect user data.");
             }
         });
     }

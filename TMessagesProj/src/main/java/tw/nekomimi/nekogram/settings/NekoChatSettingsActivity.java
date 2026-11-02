@@ -6,6 +6,8 @@ import android.annotation.SuppressLint;
 import android.content.Context;
 import android.graphics.Canvas;
 import android.graphics.Paint;
+import android.graphics.PorterDuff;
+import android.graphics.PorterDuffColorFilter;
 import android.graphics.Typeface;
 import android.graphics.drawable.Drawable;
 import android.text.SpannableStringBuilder;
@@ -14,9 +16,11 @@ import android.text.TextPaint;
 import android.text.TextUtils;
 import android.util.TypedValue;
 import android.view.Gravity;
+import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.FrameLayout;
+import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
@@ -50,6 +54,7 @@ import org.telegram.ui.Components.CubicBezierInterpolator;
 import org.telegram.ui.Components.LayoutHelper;
 import org.telegram.ui.Components.RecyclerListView;
 import org.telegram.ui.Components.SeekBarView;
+import org.telegram.ui.Components.Switch;
 import org.telegram.ui.Components.TextStyleSpan;
 import org.telegram.ui.Components.TypefaceSpan;
 import org.telegram.ui.Components.UndoView;
@@ -252,7 +257,7 @@ public class NekoChatSettingsActivity extends BaseNekoXSettingsActivity implemen
     private final AbstractConfigCell takeGIFasVideoRow = cellGroup.appendCell(new ConfigCellTextCheck(NekoConfig.takeGIFasVideo));
     private final AbstractConfigCell autoPauseVideoRow = cellGroup.appendCell(new ConfigCellTextCheck(NekoConfig.autoPauseVideo, getString(R.string.AutoPauseVideoAbout)));
     private final AbstractConfigCell doubleTapSeekDurationRow = cellGroup.appendCell(new ConfigCellSelectBox(null, NaConfig.INSTANCE.getDoubleTapSeekDuration(), doubleTapSeekDurations, null));
-    private final AbstractConfigCell disablePreviewVideoSoundShortcutRow = cellGroup.appendCell(new ConfigCellTextCheck(NaConfig.INSTANCE.getDisablePreviewVideoSoundShortcut(), getString(R.string.DisablePreviewVideoSoundShortcutNotice)));
+    private final AbstractConfigCell playVideoWithVolumeKeysRow = cellGroup.appendCell(new ConfigCellTextCheck(NaConfig.INSTANCE.getPlayVideoWithVolumeKeys(), getString(R.string.PlayVideoWithVolumeKeysNotice)));
     private final AbstractConfigCell dontAutoPlayNextVoiceRow = cellGroup.appendCell(new ConfigCellTextCheck(NaConfig.INSTANCE.getDontAutoPlayNextVoice()));
     private final AbstractConfigCell showSpoilersDirectlyRow = cellGroup.appendCell(new ConfigCellTextCheck(NekoConfig.showSpoilersDirectly));
     private final AbstractConfigCell dividerMedia = cellGroup.appendCell(new ConfigCellDivider());
@@ -269,32 +274,238 @@ public class NekoChatSettingsActivity extends BaseNekoXSettingsActivity implemen
                 add(new ConfigCellTextCheckIcon(NaConfig.INSTANCE.getChatMenuItemClearDeleted(), getString(R.string.ClearDeleted), R.drawable.msg_clear));
                 add(new ConfigCellTextCheckIcon(NaConfig.INSTANCE.getChatMenuItemDeleteOwnMessages(), getString(R.string.DeleteAllFromSelf), R.drawable.msg_delete));
             }}));
-    private final AbstractConfigCell messageMenuRow = cellGroup.appendCell(createConfigMenuCell("MessageMenu", R.string.MessageMenu, R.drawable.msg_list, new ArrayList<>() {{
-                add(new ConfigCellTextCheckIcon(NaConfig.INSTANCE.getShowReactions(), R.drawable.msg_reactions2));
-                add(new ConfigCellTextCheckIcon(NaConfig.INSTANCE.getShowReplyInPrivate(), R.drawable.menu_reply));
-                add(new ConfigCellTextCheckIcon(NaConfig.INSTANCE.getShowCopyLink(), R.drawable.msg_link));
-                add(new ConfigCellTextCheckIcon(NaConfig.INSTANCE.getShowCopyFrame(), getString(R.string.CopyVideoFrame), R.drawable.msg_copy_photo));
-                add(new ConfigCellTextCheckIcon(NaConfig.INSTANCE.getShowCopyPhoto(), R.drawable.msg_copy_photo));
-                add(new ConfigCellTextCheckIcon(NaConfig.INSTANCE.getShowCopyAsSticker(), R.drawable.msg_copy_photo));
-                add(new ConfigCellTextCheckIcon(NaConfig.INSTANCE.getShowAddToStickers(), R.drawable.msg_sticker));
-                add(new ConfigCellTextCheckIcon(NaConfig.INSTANCE.getShowAddToFavorites(), R.drawable.msg_fave));
-                add(new ConfigCellTextCheckIcon(NaConfig.INSTANCE.getShowNoQuoteForward(), R.drawable.msg_forward_noquote));
-                add(new ConfigCellTextCheckIcon(NaConfig.INSTANCE.getShowSetReminder(), R.drawable.msg_calendar2));
-                add(new ConfigCellTextCheckIcon(NekoConfig.showAddToSavedMessages, getString(R.string.AddToSavedMessages), R.drawable.msg_saved));
-                add(new ConfigCellTextCheckIcon(NaConfig.INSTANCE.getShowAddToBookmark(), getString(R.string.AddBookmark), R.drawable.msg_fave));
-                add(new ConfigCellTextCheckIcon(NekoConfig.showRepeat, getString(R.string.Repeat), R.drawable.msg_repeat));
-                add(new ConfigCellTextCheckIcon(NaConfig.INSTANCE.getShowRepeatAsCopy(), R.drawable.msg_repeat));
-                add(new ConfigCellTextCheckIcon(NekoConfig.showDeleteDownloadedFile, getString(R.string.DeleteDownloadedFile), R.drawable.msg_clear));
-                add(new ConfigCellTextCheckIcon(NekoConfig.showViewHistory, getString(R.string.ViewHistory), R.drawable.menu_recent));
-                add(new ConfigCellTextCheckIcon(NekoConfig.showTranslate, getString(R.string.Translate), R.drawable.msg_translate));
-                add(new ConfigCellTextCheckIcon(NaConfig.INSTANCE.getShowTranslateMessageLLM(), R.drawable.magic_stick));
-                add(new ConfigCellTextCheckIcon(NekoConfig.showShareMessages, getString(R.string.ShareMessages), R.drawable.msg_shareout));
-                add(new ConfigCellTextCheckIcon(NekoConfig.showMessageHide, getString(R.string.Hide), R.drawable.msg_disable));
-                add(new ConfigCellTextCheckIcon(NekoConfig.showReport, getString(R.string.ReportChat), R.drawable.msg_report));
-                add(new ConfigCellTextCheckIcon(NekoConfig.showAdminActions, getString(R.string.EditAdminRights), R.drawable.profile_admin));
-                add(new ConfigCellTextCheckIcon(NekoConfig.showChangePermissions, getString(R.string.ChangePermissions), R.drawable.msg_permissions));
-                add(new ConfigCellTextCheckIcon(NekoConfig.showMessageDetails, getString(R.string.MessageDetails), R.drawable.msg_info));
-            }}));
+    @SuppressLint("NotifyDataSetChanged")
+    private final AbstractConfigCell messageMenuRow = cellGroup.appendCell(new ConfigCellTextCheckIcon(null, "MessageMenu", null, R.drawable.msg_list, false, () -> {
+        if (getParentActivity() == null) return;
+        Context ctx = getParentActivity();
+        record Item(String key, ConfigCellTextCheckIcon cellConfig) {
+        }
+        ArrayList<Item> items = new ArrayList<>();
+        items.add(new Item("reactions", new ConfigCellTextCheckIcon(NaConfig.INSTANCE.getShowReactions(), R.drawable.msg_reactions2)));
+        items.add(new Item("reply", new ConfigCellTextCheckIcon(NaConfig.INSTANCE.getShowMenuReply(), "reply", getString(R.string.Reply), R.drawable.menu_reply)));
+        items.add(new Item("reply_private", new ConfigCellTextCheckIcon(NaConfig.INSTANCE.getShowReplyInPrivate(), R.drawable.menu_reply)));
+        items.add(new Item("copy", new ConfigCellTextCheckIcon(NaConfig.INSTANCE.getShowMenuCopy(), "copy", getString(R.string.Copy), R.drawable.msg_copy)));
+        items.add(new Item("forward", new ConfigCellTextCheckIcon(NaConfig.INSTANCE.getShowMenuForward(), "forward", getString(R.string.Forward), R.drawable.msg_forward)));
+        items.add(new Item("forward_noquote", new ConfigCellTextCheckIcon(NaConfig.INSTANCE.getShowNoQuoteForward(), R.drawable.msg_forward_noquote)));
+        items.add(new Item("view_thread", new ConfigCellTextCheckIcon(NaConfig.INSTANCE.getShowMenuViewThread(), "view_thread", getString(R.string.ViewThread), R.drawable.msg_viewreplies)));
+        items.add(new Item("edit", new ConfigCellTextCheckIcon(NaConfig.INSTANCE.getShowMenuEdit(), "edit", getString(R.string.Edit), R.drawable.msg_edit)));
+        items.add(new Item("pin", new ConfigCellTextCheckIcon(NaConfig.INSTANCE.getShowMenuPin(), "pin", getString(R.string.PinMessage), R.drawable.msg_pin)));
+        items.add(new Item("delete", new ConfigCellTextCheckIcon(NaConfig.INSTANCE.getShowMenuDelete(), "delete", getString(R.string.Delete), R.drawable.msg_delete)));
+        items.add(new Item("copy_link", new ConfigCellTextCheckIcon(NaConfig.INSTANCE.getShowCopyLink(), R.drawable.msg_link)));
+        items.add(new Item("copy_frame", new ConfigCellTextCheckIcon(NaConfig.INSTANCE.getShowCopyFrame(), getString(R.string.CopyVideoFrame), R.drawable.msg_copy_photo)));
+        items.add(new Item("copy_photo", new ConfigCellTextCheckIcon(NaConfig.INSTANCE.getShowCopyPhoto(), R.drawable.msg_copy_photo)));
+        items.add(new Item("copy_as_sticker", new ConfigCellTextCheckIcon(NaConfig.INSTANCE.getShowCopyAsSticker(), R.drawable.msg_copy_photo)));
+        items.add(new Item("add_to_stickers", new ConfigCellTextCheckIcon(NaConfig.INSTANCE.getShowAddToStickers(), R.drawable.msg_sticker)));
+        items.add(new Item("add_to_favorites", new ConfigCellTextCheckIcon(NaConfig.INSTANCE.getShowAddToFavorites(), R.drawable.msg_fave)));
+        items.add(new Item("set_reminder", new ConfigCellTextCheckIcon(NaConfig.INSTANCE.getShowSetReminder(), R.drawable.msg_calendar2)));
+        items.add(new Item("save_message", new ConfigCellTextCheckIcon(NekoConfig.showAddToSavedMessages, getString(R.string.AddToSavedMessages), R.drawable.msg_saved)));
+        items.add(new Item("bookmark", new ConfigCellTextCheckIcon(NaConfig.INSTANCE.getShowAddToBookmark(), getString(R.string.AddBookmark), R.drawable.msg_fave)));
+        items.add(new Item("repeat", new ConfigCellTextCheckIcon(NekoConfig.showRepeat, getString(R.string.Repeat), R.drawable.msg_repeat)));
+        items.add(new Item("repeat_as_copy", new ConfigCellTextCheckIcon(NaConfig.INSTANCE.getShowRepeatAsCopy(), R.drawable.msg_repeat)));
+        items.add(new Item("delete_downloaded_file", new ConfigCellTextCheckIcon(NekoConfig.showDeleteDownloadedFile, getString(R.string.DeleteDownloadedFile), R.drawable.msg_clear)));
+        items.add(new Item("view_history", new ConfigCellTextCheckIcon(NekoConfig.showViewHistory, getString(R.string.ViewHistory), R.drawable.menu_recent)));
+        items.add(new Item("translate", new ConfigCellTextCheckIcon(NekoConfig.showTranslate, getString(R.string.Translate), R.drawable.msg_translate)));
+        items.add(new Item("translate_llm", new ConfigCellTextCheckIcon(NaConfig.INSTANCE.getShowTranslateMessageLLM(), R.drawable.magic_stick)));
+        items.add(new Item("share", new ConfigCellTextCheckIcon(NekoConfig.showShareMessages, getString(R.string.ShareMessages), R.drawable.msg_shareout)));
+        items.add(new Item("hide", new ConfigCellTextCheckIcon(NekoConfig.showMessageHide, getString(R.string.Hide), R.drawable.msg_disable)));
+        items.add(new Item("report", new ConfigCellTextCheckIcon(NekoConfig.showReport, getString(R.string.ReportChat), R.drawable.msg_report)));
+        items.add(new Item("admin_actions", new ConfigCellTextCheckIcon(NekoConfig.showAdminActions, getString(R.string.EditAdminRights), R.drawable.profile_admin)));
+        items.add(new Item("change_permissions", new ConfigCellTextCheckIcon(NekoConfig.showChangePermissions, getString(R.string.ChangePermissions), R.drawable.msg_permissions)));
+        items.add(new Item("message_details", new ConfigCellTextCheckIcon(NekoConfig.showMessageDetails, getString(R.string.MessageDetails), R.drawable.msg_info)));
+
+        // recover saved order
+        String orderStr = NaConfig.INSTANCE.getMessageMenuOrder().String();
+        ArrayList<Item> ordered = new ArrayList<>();
+        if (!TextUtils.isEmpty(orderStr)) {
+            String[] keys = orderStr.split(",");
+            for (String k : keys) {
+                String trimmed = k.trim();
+                for (Item it : items) {
+                    if (it.key.equals(trimmed) && !ordered.contains(it)) {
+                        ordered.add(it);
+                    }
+                }
+            }
+            for (Item it : items) {
+                if (!ordered.contains(it)) {
+                    ordered.add(it);
+                }
+            }
+        } else {
+            ordered.addAll(items);
+        }
+
+        RecyclerView rv = new RecyclerView(ctx);
+        rv.setLayoutManager(new LinearLayoutManager(ctx, LinearLayoutManager.VERTICAL, false));
+
+        class RowCell extends FrameLayout {
+            final ImageView iconView;
+            final TextView titleView;
+            final Switch switchView;
+            final ImageView reorderView;
+
+            public RowCell(Context context) {
+                super(context);
+                setLayoutParams(new RecyclerView.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, AndroidUtilities.dp(48)));
+
+                iconView = new ImageView(context);
+                iconView.setScaleType(ImageView.ScaleType.CENTER);
+                iconView.setColorFilter(new PorterDuffColorFilter(Theme.getColor(Theme.key_windowBackgroundWhiteGrayIcon), PorterDuff.Mode.MULTIPLY));
+                addView(iconView, LayoutHelper.createFrame(24, 24, Gravity.CENTER_VERTICAL | (LocaleController.isRTL ? Gravity.RIGHT : Gravity.LEFT), 18, 0, 18, 0));
+
+                titleView = new TextView(context);
+                titleView.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 16);
+                titleView.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteBlackText));
+                titleView.setSingleLine(true);
+                titleView.setEllipsize(TextUtils.TruncateAt.END);
+                addView(titleView, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, Gravity.CENTER_VERTICAL, LocaleController.isRTL ? 104 : 60, 0, LocaleController.isRTL ? 60 : 104, 0));
+
+                switchView = new Switch(context);
+                switchView.setColors(Theme.key_switchTrack, Theme.key_switchTrackChecked, Theme.key_windowBackgroundWhite, Theme.key_windowBackgroundWhite);
+                addView(switchView, LayoutHelper.createFrame(38, 22, Gravity.CENTER_VERTICAL | (LocaleController.isRTL ? Gravity.LEFT : Gravity.RIGHT), LocaleController.isRTL ? 50 : 0, 0, LocaleController.isRTL ? 0 : 50, 0));
+
+                reorderView = new ImageView(context);
+                reorderView.setImageResource(R.drawable.list_reorder);
+                reorderView.setScaleType(ImageView.ScaleType.CENTER);
+                reorderView.setColorFilter(new PorterDuffColorFilter(Theme.getColor(Theme.key_stickers_menu), PorterDuff.Mode.MULTIPLY));
+                addView(reorderView, LayoutHelper.createFrame(36, 48, Gravity.CENTER_VERTICAL | (LocaleController.isRTL ? Gravity.LEFT : Gravity.RIGHT), 8, 0, 8, 0));
+            }
+        }
+
+        class VH extends RecyclerView.ViewHolder {
+            final RowCell cell;
+            VH(RowCell c) {
+                super(c);
+                cell = c;
+            }
+        }
+
+        class Adapter extends RecyclerView.Adapter<VH> {
+            final ArrayList<Item> data;
+            ItemTouchHelper itemTouchHelper;
+
+            Adapter(ArrayList<Item> d) {
+                data = d;
+            }
+
+            @NonNull
+            @Override
+            public VH onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
+                RowCell c = new RowCell(ctx);
+                c.setBackground(Theme.getSelectorDrawable(false));
+                return new VH(c);
+            }
+
+            @Override
+            public void onBindViewHolder(VH holder, int position) {
+                Item it = data.get(position);
+                holder.cell.titleView.setText(it.cellConfig.getTitle());
+                holder.cell.iconView.setImageResource(it.cellConfig.getResId());
+                holder.cell.switchView.setChecked(it.cellConfig.getBindConfig().Bool(), false);
+
+                View.OnClickListener toggle = v -> {
+                    int pos = holder.getAdapterPosition();
+                    if (pos < 0 || pos >= data.size()) return;
+                    Item item = data.get(pos);
+                    item.cellConfig.getBindConfig().toggleConfigBool();
+                    holder.cell.switchView.setChecked(item.cellConfig.getBindConfig().Bool(), true);
+                    NotificationCenter.getGlobalInstance().postNotificationName(NotificationCenter.reloadInterface);
+                };
+                holder.cell.setOnClickListener(toggle);
+                holder.cell.switchView.setOnClickListener(toggle);
+
+                holder.cell.reorderView.setOnTouchListener((v, event) -> {
+                    if (event.getActionMasked() == MotionEvent.ACTION_DOWN && itemTouchHelper != null) {
+                        itemTouchHelper.startDrag(holder);
+                    }
+                    return false;
+                });
+            }
+
+            @Override
+            public int getItemCount() {
+                return data.size();
+            }
+        }
+
+        Adapter adapter = new Adapter(ordered);
+        rv.setAdapter(adapter);
+
+        ItemTouchHelper helper = new ItemTouchHelper(new ItemTouchHelper.Callback() {
+            @Override
+            public boolean isLongPressDragEnabled() {
+                return true;
+            }
+
+            @Override
+            public int getMovementFlags(@NonNull RecyclerView recyclerView, @NonNull RecyclerView.ViewHolder viewHolder) {
+                return makeMovementFlags(ItemTouchHelper.UP | ItemTouchHelper.DOWN, 0);
+            }
+
+            @Override
+            public boolean onMove(@NonNull RecyclerView recyclerView, @NonNull RecyclerView.ViewHolder viewHolder, @NonNull RecyclerView.ViewHolder target) {
+                int from = viewHolder.getAdapterPosition();
+                int to = target.getAdapterPosition();
+                if (from < 0 || to < 0 || from >= ordered.size() || to >= ordered.size()) return false;
+                Item it = ordered.remove(from);
+                ordered.add(to, it);
+                adapter.notifyItemMoved(from, to);
+                return true;
+            }
+
+            @Override
+            public void onSwiped(@NonNull RecyclerView.ViewHolder viewHolder, int direction) {
+            }
+
+            @Override
+            public void onSelectedChanged(RecyclerView.ViewHolder viewHolder, int actionState) {
+                super.onSelectedChanged(viewHolder, actionState);
+                if (actionState != ItemTouchHelper.ACTION_STATE_IDLE && viewHolder != null) {
+                    viewHolder.itemView.setBackgroundColor(Theme.getColor(Theme.key_dialogBackgroundGray));
+                }
+            }
+
+            @Override
+            public void clearView(@NonNull RecyclerView recyclerView, @NonNull RecyclerView.ViewHolder viewHolder) {
+                super.clearView(recyclerView, viewHolder);
+                viewHolder.itemView.setBackground(Theme.getSelectorDrawable(false));
+            }
+        });
+        adapter.itemTouchHelper = helper;
+        helper.attachToRecyclerView(rv);
+
+        AlertDialog.Builder builder = new AlertDialog.Builder(ctx);
+        builder.setTitle(getString(R.string.MessageMenu));
+        builder.setView(rv);
+        builder.setPositiveButton(getString(R.string.OK), (d, which) -> {
+            StringBuilder sbOrder = new StringBuilder();
+            for (int i = 0; i < ordered.size(); i++) {
+                if (i > 0) sbOrder.append(",");
+                sbOrder.append(ordered.get(i).key);
+            }
+            NaConfig.INSTANCE.getMessageMenuOrder().setConfigString(sbOrder.toString());
+            NotificationCenter.getGlobalInstance().postNotificationName(NotificationCenter.reloadInterface);
+        });
+        builder.setNegativeButton(getString(R.string.Cancel), null);
+        builder.setNeutralButton(getString(R.string.Reset), (d, which) -> {
+            String def = "reactions,reply,reply_private,copy,forward,forward_noquote,view_thread,edit,pin,delete,copy_link,copy_frame,copy_photo,copy_as_sticker,add_to_stickers,add_to_favorites,set_reminder,save_message,bookmark,repeat,repeat_as_copy,delete_downloaded_file,view_history,translate,translate_llm,share,hide,report,admin_actions,change_permissions,message_details";
+            NaConfig.INSTANCE.getMessageMenuOrder().setConfigString(def);
+            ordered.clear();
+            String[] keys = def.split(",");
+            for (String k : keys) {
+                String trimmed = k.trim();
+                for (Item it : items) {
+                    if (it.key.equals(trimmed) && !ordered.contains(it)) ordered.add(it);
+                }
+            }
+            for (Item it : items) {
+                if (!ordered.contains(it)) ordered.add(it);
+            }
+            adapter.notifyDataSetChanged();
+            NotificationCenter.getGlobalInstance().postNotificationName(NotificationCenter.reloadInterface);
+        });
+        builder.create().show();
+    }));
     private final AbstractConfigCell mediaViewerMenuRow = cellGroup.appendCell(createConfigMenuCell("MediaViewerMenu", R.string.MediaViewerMenu, R.drawable.msg_photos, new ArrayList<>() {{
                 add(new ConfigCellTextCheckIcon(NaConfig.INSTANCE.getMediaViewerMenuItemForward(), getString(R.string.Forward), R.drawable.msg_forward));
                 add(new ConfigCellTextCheckIcon(NaConfig.INSTANCE.getMediaViewerMenuItemNoQuoteForward(), getString(R.string.NoQuoteForward), R.drawable.msg_forward_noquote));

@@ -6414,14 +6414,16 @@ public class NotificationsController extends BaseController implements Notificat
             case 0:
                 return R.drawable.notification;
             case 1:
-                return R.drawable.nagramx_notification;
+                return R.drawable.gorilla_notification;
             case 2:
-                return R.drawable.nagram_notification;
+                return R.drawable.nagramx_notification;
             case 3:
+                return R.drawable.nagram_notification;
+            case 4:
                 return R.drawable.neko_notification;
         }
 
-        return R.drawable.notification;
+        return R.drawable.gorilla_notification;
     }
 
     public void loadTopicsNotificationsExceptions(long dialogId, Consumer<HashSet<Integer>> consumer) {

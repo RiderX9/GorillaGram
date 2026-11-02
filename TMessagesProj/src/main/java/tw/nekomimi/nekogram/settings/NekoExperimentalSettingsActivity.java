@@ -70,18 +70,16 @@ public class NekoExperimentalSettingsActivity extends BaseNekoXSettingsActivity 
     // General
     private final AbstractConfigCell headerGeneral = cellGroup.appendCell(new ConfigCellHeader(getString(R.string.General)));
     private final AbstractConfigCell backAnimationStyleRow = cellGroup.appendCell(new ConfigCellSelectBox(null, NaConfig.INSTANCE.getBackAnimationStyle(),
-            Build.VERSION.SDK_INT >= 34 ? new String[]{
+            new String[]{
                     getString(R.string.BackAnimationClassic),
                     getString(R.string.BackAnimationSpring),
                     getString(R.string.BackAnimationPredictive),
-            } : new String[]{
-                    getString(R.string.BackAnimationClassic),
-                    getString(R.string.BackAnimationSpring),
             }, null));
     private final AbstractConfigCell springAnimationCrossfadeRow = cellGroup.appendCell(new ConfigCellTextCheck(NaConfig.INSTANCE.getSpringAnimationCrossfade()));
     private final AbstractConfigCell sendLockedCustomEmojiAsStickerRow = cellGroup.appendCell(new ConfigCellTextCheck(NaConfig.INSTANCE.getSendLockedCustomEmojiAsSticker(), getString(R.string.SendLockedCustomEmojiAsStickerInfo)));
     private final AbstractConfigCell unlimitedPinnedDialogsRow = cellGroup.appendCell(new ConfigCellTextCheck(NekoConfig.unlimitedPinnedDialogs, getString(R.string.UnlimitedPinnedDialogsAbout)));
     private final AbstractConfigCell unlimitedFavedStickersRow = cellGroup.appendCell(new ConfigCellTextCheck(NekoConfig.unlimitedFavedStickers, getString(R.string.UnlimitedFavoredStickersAbout)));
+    private final AbstractConfigCell draggableBottomBarRow = cellGroup.appendCell(new ConfigCellTextCheck(NaConfig.INSTANCE.getDraggableBottomBar(), getString(R.string.DraggableBottomBarNotice)));
     private final AbstractConfigCell dividerGeneral = cellGroup.appendCell(new ConfigCellDivider());
 
     // Connections
@@ -179,6 +177,8 @@ public class NekoExperimentalSettingsActivity extends BaseNekoXSettingsActivity 
             } else if (key.equals(NekoConfig.forceFontWeightFallback.getKey())) {
                 tooltip.showWithAction(0, UndoView.ACTION_NEED_RESTART, null, null);
             } else if (key.equals(NaConfig.INSTANCE.getHideStoriesFromHeader().getKey())) {
+                tooltip.showWithAction(0, UndoView.ACTION_NEED_RESTART, null, null);
+            } else if (key.equals(NaConfig.INSTANCE.getDraggableBottomBar().getKey())) {
                 tooltip.showWithAction(0, UndoView.ACTION_NEED_RESTART, null, null);
             }
         };

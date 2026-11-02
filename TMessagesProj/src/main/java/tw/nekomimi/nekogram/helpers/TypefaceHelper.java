@@ -68,7 +68,8 @@ public class TypefaceHelper {
                 case 3 -> isBold ? "fonts/custom/jetbrains_bold.ttf" : "fonts/custom/jetbrains_regular.ttf";
                 case 4 -> "fonts/custom/playfair_regular.ttf";
                 case 5 -> "fonts/custom/inter_regular.ttf";
-                case 6 -> isBold ? "fonts/custom/bold_bold.otf" : "fonts/custom/bold_regular.otf";
+                case 6 -> isBold ? "fonts/custom/bold_bold.otf" : "fonts/custom/sf_pro_bold.ttf";
+                case 7 -> isBold ? "fonts/custom/linotte_bold.ttf" : "fonts/custom/linotte_regular.ttf";
                 default -> null;
             };
             if (fontFile == null) return null;

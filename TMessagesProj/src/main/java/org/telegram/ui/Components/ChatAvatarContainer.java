@@ -519,11 +519,13 @@ public class ChatAvatarContainer extends FrameLayout implements FactorAnimator.T
     private boolean pressed;
     @Override
     public boolean onTouchEvent(MotionEvent ev) {
-        if (ev.getAction() == MotionEvent.ACTION_DOWN && canSearch()) {
+        if (ev.getAction() == MotionEvent.ACTION_DOWN) {
             pressed = true;
             bounce.setPressed(true);
             AndroidUtilities.cancelRunOnUIThread(this.onLongClick);
-            AndroidUtilities.runOnUIThread(this.onLongClick, ViewConfiguration.getLongPressTimeout());
+            if (canSearch()) {
+                AndroidUtilities.runOnUIThread(this.onLongClick, ViewConfiguration.getLongPressTimeout());
+            }
             return true;
         } else if (ev.getAction() == MotionEvent.ACTION_UP || ev.getAction() == MotionEvent.ACTION_CANCEL) {
             if (pressed) {
@@ -546,11 +548,7 @@ public class ChatAvatarContainer extends FrameLayout implements FactorAnimator.T
 
     @Override
     protected void dispatchDraw(Canvas canvas) {
-        canvas.save();
-        final float s = bounce.getScale(.02f);
-        canvas.scale(s, s, getWidth() / 2f, getHeight() / 2f);
         super.dispatchDraw(canvas);
-        canvas.restore();
     }
 
     @Override

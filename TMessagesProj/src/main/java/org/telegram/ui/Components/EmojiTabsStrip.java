@@ -363,7 +363,7 @@ public class EmojiTabsStrip extends ScrollableHorizontalScrollView {
                 contentView.addView(settingsTab = new EmojiTabButton(context, settingsDrawableId, false, true));
                 settingsTab.setContentDescription(LocaleController.getString(R.string.Settings));
                 settingsTab.id = (long) "settings".hashCode();
-                settingsTab.setAlpha(0);
+                settingsTab.setAlpha(1f);
             }
             updateClickListeners();
         }
@@ -683,6 +683,9 @@ public class EmojiTabsStrip extends ScrollableHorizontalScrollView {
     public void updateColors() {
         if (recentTab != null) {
             recentTab.updateColor();
+        }
+        if (settingsTab != null) {
+            settingsTab.updateColor();
         }
     }
 

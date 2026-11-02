@@ -339,6 +339,7 @@ public class EditTextBoldCursor extends EditTextEffects {
         activeLinePaint = new Paint();
         errorPaint = new TextPaint(Paint.ANTI_ALIAS_FLAG);
         errorPaint.setTextSize(dp(11));
+        setTypeface(AndroidUtilities.regular());
         if (Build.VERSION.SDK_INT >= 26) {
             setImportantForAutofill(View.IMPORTANT_FOR_AUTOFILL_NO);
         }
@@ -634,6 +635,9 @@ public class EditTextBoldCursor extends EditTextEffects {
     }
 
     public void setHintText(CharSequence text, boolean animated, TextPaint paint) {
+        if (paint != null) {
+            paint.setTypeface(AndroidUtilities.regular());
+        }
         if (hintAnimatedDrawable != null) {
             hintAnimatedDrawable.setText(text, !LocaleController.isRTL);
         } else {

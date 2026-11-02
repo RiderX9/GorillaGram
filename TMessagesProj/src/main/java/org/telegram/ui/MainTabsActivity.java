@@ -977,7 +977,16 @@ public class MainTabsActivity extends ViewPagerActivity implements NotificationC
                 selectTab(position, true);
                 viewPager.scrollToPosition(position);
             });
-            tabView.setOnLongClickListener(v -> processLongClick(v, type));
+            tabView.setOnLongClickListener(v -> {
+                if (tabsView != null) {
+                    tabsView.cancelDragAndLock();
+                }
+                boolean handled = processLongClick(v, type);
+                if (!handled && tabsView != null) {
+                    tabsView.setPopupMenuShowing(false);
+                }
+                return handled;
+            });
 
             tabs[tabIndex] = tabView;
             tabsView.addView(tabView);
@@ -1718,6 +1727,14 @@ public class MainTabsActivity extends ViewPagerActivity implements NotificationC
         final ShapeDrawable bg = Theme.createRoundRectDrawable(dp(28), getThemedColor(Theme.key_windowBackgroundWhite));
         bg.getPaint().setShadowLayer(dp(6), 0, dp(1), Theme.multAlpha(0xFF000000, 0.15f));
         options.setScrimViewBackground(bg);
+        if (tabsView != null) {
+            tabsView.setPopupMenuShowing(true);
+            options.setOnDismiss(() -> {
+                if (tabsView != null) {
+                    tabsView.setPopupMenuShowing(false);
+                }
+            });
+        }
     }
 
     private void repositionSearchButton() {

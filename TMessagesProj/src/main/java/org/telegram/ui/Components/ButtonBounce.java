@@ -112,4 +112,37 @@ public class ButtonBounce {
         }
     }
 
+    public static ButtonBounce apply(View view) {
+        return apply(view, 0.08f);
+    }
+
+    public static ButtonBounce apply(View view, float maxScale) {
+        if (view == null) return null;
+        ButtonBounce bounce = new ButtonBounce(view) {
+            @Override
+            public void invalidate() {
+                super.invalidate();
+                float scale = getScale(maxScale);
+                view.setScaleX(scale);
+                view.setScaleY(scale);
+            }
+        };
+        view.setOnTouchListener((v, ev) -> {
+            int action = ev.getActionMasked();
+            if (action == android.view.MotionEvent.ACTION_DOWN) {
+                bounce.setPressed(true);
+            } else if (action == android.view.MotionEvent.ACTION_UP || action == android.view.MotionEvent.ACTION_CANCEL) {
+                bounce.setPressed(false);
+            } else if (action == android.view.MotionEvent.ACTION_MOVE) {
+                float x = ev.getX();
+                float y = ev.getY();
+                if (x < 0 || x > v.getWidth() || y < 0 || y > v.getHeight()) {
+                    bounce.setPressed(false);
+                }
+            }
+            return false;
+        });
+        return bounce;
+    }
+
 }
