@@ -1,6 +1,6 @@
 # GorillaGram 🦍
 
-**GorillaGram** is an enhanced, customized fork of [NagramXF](https://github.com/Keeperorowner/NagramXF) (Telegram for Android) built for a fluid, modern iOS-style experience with custom typography and powerful enhancements.
+**GorillaGram** is an enhanced, customized fork of [NagramXF](https://github.com/Keeperorowner/NagramXF) built for a fluid, modern iOS-style experience with custom typography and powerful enhancements.
 
 ---
 
